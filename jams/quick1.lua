@@ -1,11 +1,8 @@
 
 local jam = {}
 
-require("lib/chord")
 
 function jam:init(io)
-    self.chord = Chord.new():parse("C-7")
-    self.chord:print()
     self.count = 0
 end
 
