@@ -57,7 +57,7 @@ Send a MIDI CC message.
 io.ctlout(7, 64)      -- Volume to 64 on output channel
 ```
 
-Output format: `cc [controller] [value] [channel]`
+Output format: `ctl [controller] [value] [channel]`
 
 ## Input Handlers
 
@@ -121,10 +121,10 @@ return jam
 - **`bpm [number]`** - Set tempo
 - **`tpb [number]`** - Set ticks per beat resolution
 - **`list note [args]`** - Route to `notein` handler
-- **`list cc [args]`** - Route to `ctlin` handler
+- **`list ctl [args]`** - Route to `ctlin` handler
 
 ### Outlets
-- **Left outlet** - Musical messages (`note` and `cc` lists)
+- **Left outlet** - Musical messages (`note` and `ctl` lists)
 - **Right outlet** - Info and debug messages (prints from Lua)
 
 ## Design Philosophy
