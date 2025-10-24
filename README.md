@@ -67,7 +67,7 @@ Jam scripts can respond to incoming messages by implementing handler functions:
 Called when a note message arrives.
 
 ```lua
-function jam:notein(io, note, velocity)
+function notein(io, note, velocity)
     -- Process incoming note
 end
 ```
@@ -76,7 +76,7 @@ end
 Called when a CC message arrives.
 
 ```lua
-function jam:ctlin(io, controller, value)
+function ctlin(io, controller, value)
     -- Process incoming CC
 end
 ```
@@ -87,22 +87,20 @@ Generic fallback for any unhandled list messages.
 ## Basic Jam Structure
 
 ```lua
-local jam = {}
 
-function jam:init(io)
+function init(io)
     -- Initialize your musical process
 end
 
-function jam:tick(io)
+function tick(io)
     -- Called every tick - generate music here
 end
 
 -- Optional: respond to incoming messages
-function jam:notein(io, note, velocity)
+function notein(io, note, velocity)
     -- Process incoming MIDI
 end
 
-return jam
 ```
 
 ## Pure Data Setup
