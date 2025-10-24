@@ -1,30 +1,18 @@
 
-local jam = {}
 
+require("lib/chord")
 
-function jam:init(io)
+function init(io)
+    chord = Chord.new("C-7")
+    chord:print()
+    count = 0
 end
 
-function jam:ctlin(io, ...)
-    print("received CC")
-end
-
-function jam:msgin(io, ...)
-    print("received message")
-end
-
-function jam:notein(io, ...)
-    print("received NOTE")
-end
-
-function jam:tick(io)
-    if io.on(1) then
-        io.msgout("onono", 1, 2)
-        io.noteout(60, 0)
-        io.noteout(60, 100)
-        io.noteout(72, 100, .1)
-        io.cltout(30,20)
+function tick(io)
+    if io.on(1/4) then
+        count = count + 3
+        count = count % 28
+        io.noteout(chord:note(count, 4), 100, .1)
     end
 end
 
-return jam

@@ -1,23 +1,23 @@
 
-local jam = {}
 
 
-function jam:init(io)
+function init(io)
+    print("COOL")
 end
 
-function jam:ctlin(io, ...)
+function ctlin(io, ...)
     print("received CC")
 end
 
-function jam:msgin(io, ...)
+function msgin(io, ...)
     print("received message")
 end
 
-function jam:notein(io, ...)
+function notein(io, ...)
     print("received NOTE")
 end
 
-function jam:tick(io)
+function tick(io)
     if io.on(1) then
         io.msgout("onono", 1, 2)
         io.noteout(60, 0)
@@ -27,4 +27,3 @@ function jam:tick(io)
     end
 end
 
-return jam

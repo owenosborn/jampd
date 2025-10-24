@@ -241,7 +241,7 @@ static int load_jam(t_jam *x, t_symbol *s) {
         lua_pop(L, 1);  // pop package table
     }
 
-    // Load the jam file
+    // Load and execute the jam file
     if (luaL_dofile(L, s->s_name) != LUA_OK) {
         pd_error(x, "jam: error loading %s: %s", 
                  s->s_name, lua_tostring(L, -1));
@@ -249,32 +249,25 @@ static int load_jam(t_jam *x, t_symbol *s) {
         return -1;
     }
     
-    // The jam should return a table
-    if (!lua_istable(L, -1)) {
-        pd_error(x, "jam: %s did not return a table", s->s_name);
-        lua_pop(L, 1);
-        return -1;
-    }
-    
-    // Store the jam table as global "jam"
-    lua_setglobal(L, "jam");
+    // Pop any return value from the script (we don't use it)
+    lua_settop(L, 0);
     
     // Initialize the io table (this also overrides print)
     init_io(x);
     
-    // Call jam:init(io)
-    lua_getglobal(L, "jam");
-    lua_getfield(L, -1, "init");
-    lua_pushvalue(L, -2);  // push jam table as self
-    lua_getglobal(L, "io");
-    
-    if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
-        pd_error(x, "jam: error in init(): %s", lua_tostring(L, -1));
-        lua_pop(L, 1);
-        return -1;
+    // Call global init(io) if it exists
+    lua_getglobal(L, "init");
+    if (lua_isfunction(L, -1)) {
+        lua_getglobal(L, "io");
+        
+        if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+            pd_error(x, "jam: error in init(): %s", lua_tostring(L, -1));
+            lua_pop(L, 1);
+            return -1;
+        }
+    } else {
+        lua_pop(L, 1);  // pop non-function
     }
-    
-    lua_pop(L, 1);  // pop jam table
     
     // Send load confirmation to info outlet
     outlet_symbol(x->info_out, gensym("loaded"));
@@ -289,23 +282,16 @@ static void jam_bang(t_jam *x) {
     // Update io values
     update_io(x);
     
-    // Call jam:tick(io)
-    lua_getglobal(L, "jam");
-    if (!lua_istable(L, -1)) {
+    // Call global tick(io)
+    lua_getglobal(L, "tick");
+    if (!lua_isfunction(L, -1)) {
         lua_pop(L, 1);
         return;
     }
     
-    lua_getfield(L, -1, "tick");
-    if (!lua_isfunction(L, -1)) {
-        lua_pop(L, 2);
-        return;
-    }
-    
-    lua_pushvalue(L, -2);  // push jam table as self
     lua_getglobal(L, "io");
     
-    if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
+    if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
         pd_error(x, "jam: error in tick(): %s", lua_tostring(L, -1));
         // Also send error to info outlet
         t_atom argv[2];
@@ -314,8 +300,6 @@ static void jam_bang(t_jam *x) {
         outlet_list(x->info_out, &s_list, 2, argv);
         lua_pop(L, 1);
     }
-    
-    lua_pop(L, 1);  // pop jam table
     
     // Increment counters
     x->tc++;
@@ -330,19 +314,11 @@ static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
     // Update io values first
     update_io(x);
     
-    // Get jam table
-    lua_getglobal(L, "jam");
-    if (!lua_istable(L, -1)) {
-        lua_pop(L, 1);
-        return;
-    }
-    
     // Get the command (first argument should be a symbol)
     const char *cmd = NULL;
     if (argv[0].a_type == A_SYMBOL) {
         cmd = atom_getsymbol(&argv[0])->s_name;
     } else {
-        lua_pop(L, 1);
         return;  // First arg must be a symbol
     }
     
@@ -350,22 +326,19 @@ static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
     char handler_name[64];
     snprintf(handler_name, sizeof(handler_name), "%sin", cmd);
     
-    lua_getfield(L, -1, handler_name);
+    lua_getglobal(L, handler_name);
     
-    // If no specific handler, try generic on_message
+    // If no specific handler, try generic msgin
     if (!lua_isfunction(L, -1)) {
         lua_pop(L, 1);
-        lua_getfield(L, -1, "msgin");
+        lua_getglobal(L, "msgin");
         
         // If still no handler, just return
         if (!lua_isfunction(L, -1)) {
-            lua_pop(L, 2);
+            lua_pop(L, 1);
             return;
         }
     }
-    
-    // Push self (jam table)
-    lua_pushvalue(L, -2);
     
     // Push io table
     lua_getglobal(L, "io");
@@ -379,13 +352,11 @@ static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
         }
     }
     
-    // Call jam:on_XXX(io, ...) or jam:on_message(io, ...)
-    if (lua_pcall(L, argc + 1, 0, 0) != LUA_OK) {
+    // Call handler(io, ...)
+    if (lua_pcall(L, argc, 0, 0) != LUA_OK) {
         pd_error(x, "jam: error in %s: %s", handler_name, lua_tostring(L, -1));
         lua_pop(L, 1);
     }
-    
-    lua_pop(L, 1);  // pop jam table
 }
 
 // Reset tick counter
