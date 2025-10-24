@@ -437,7 +437,7 @@ static void *jam_new(t_symbol *s, int argc, t_atom *argv) {
     
     // Set defaults
     x->tpb = 180.0;
-    x->bpm = 100.0;
+    x->bpm = 60.0;
     x->tc = 0;
     
     // Parse arguments (optional: tpb, bpm)
