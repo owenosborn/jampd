@@ -1,4 +1,4 @@
-#N canvas 199 210 1010 566 12;
+#N canvas 340 201 1010 566 12;
 #X obj 191 260 jam 180 100, f 16;
 #X obj 226 461 pack;
 #X obj 226 485 s notes;
@@ -40,9 +40,9 @@
 #X floatatom 108 66 5 0 0 0 - - - 0;
 #X msg 126 137 bpm \$1;
 #X msg 459 118 load /Users/owen/repos/jampd/jam.lua;
-#X obj 555 359 file patchpath;
-#X obj 555 336 bng 19 250 50 0 empty empty empty 0 -10 0 12 #fcfcfc #000000 #000000;
-#X obj 555 383 print;
+#X obj 532 309 file patchpath;
+#X obj 532 286 bng 19 250 50 0 empty empty empty 0 -10 0 12 #fcfcfc #000000 #000000;
+#X obj 532 333 print;
 #X obj 827 81 openpanel;
 #X obj 828 56 bng 19 250 50 0 empty empty empty 0 -10 0 12 #fcfcfc #000000 #000000;
 #X msg 827 132 load \$1;

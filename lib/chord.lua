@@ -139,12 +139,17 @@ end
 Chord = {}
 Chord.__index = Chord
 
-function Chord.new()
+function Chord.new(chord_string)
     local self = setmetatable({}, Chord)
     self.pitches = {}      -- array of pitches, starting from 0, can be more than one octave for extensions
     self.root = 0         -- root note pitch class, 0-11
     self.bass = 0          -- bass note for slash chords, pitch class 0-11
     self.name = ""         -- chord symbol e.g. "A-7"
+    
+    if chord_string then
+        self:parse(chord_string)
+    end
+    
     return self
 end
 
