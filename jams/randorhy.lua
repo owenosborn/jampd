@@ -1,9 +1,4 @@
-
-require ("lib/lfo")
-
 function init(io)
-    lfo = LFO.new(21, {rate = 16})
-    lfo:print()
     print("hi")
     divs = {1/2, 1/4, 1/8, 1}
     divi = 1
