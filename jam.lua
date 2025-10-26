@@ -1,22 +1,21 @@
 
+
+require("lib/chord")
 require ("lib/lfo")
 
 function init(io)
-    lfo = LFO.new(21, {rate = 16})
-    lfo:print()
-    print("hi")
-    divs = {1/2, 1/4, 1/8, 1}
-    divi = 1
+    chord = Chord.new("C-7")
+    chord:print()
+    lfo = LFO.new(21, {rate = 20})
+    count = 0
 end
 
 function tick(io)
-
-    if io.on(1) then 
-        divi = math.random(1, #divs)
+    if io.on(1/4) then
+        count = count + 3
+        count = count % 28
+        io.noteout(chord:note(count, 4), 100, .1)
     end
-
-    if io.on (divs[divi]) then
-        io.noteout(60, 100, .1)
-    end
-
+    lfo:tick(io)
 end
+
