@@ -305,7 +305,86 @@ static void jam_bang(t_jam *x) {
     x->tc++;
 }
 
-// Handle list messages - route to specific handlers or fallback
+// Handle note messages: note <note> <velocity> [channel]
+static void jam_note(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
+    lua_State *L = x->L;
+    
+    if (argc < 2) {
+        pd_error(x, "jam: note requires at least 2 arguments (note, velocity)");
+        return;
+    }
+    
+    // Update io values first
+    update_io(x);
+    
+    // Get notein handler
+    lua_getglobal(L, "notein");
+    if (!lua_isfunction(L, -1)) {
+        lua_pop(L, 1);
+        return;  // No handler, silently ignore
+    }
+    
+    // Push io table
+    lua_getglobal(L, "io");
+    
+    // Push note and velocity
+    lua_pushnumber(L, atom_getfloat(&argv[0]));
+    lua_pushnumber(L, atom_getfloat(&argv[1]));
+    
+    // Push optional channel
+    if (argc >= 3) {
+        lua_pushnumber(L, atom_getfloat(&argv[2]));
+    }
+    
+    // Call notein(io, note, velocity, [channel])
+    int nargs = argc >= 3 ? 4 : 3;
+    if (lua_pcall(L, nargs, 0, 0) != LUA_OK) {
+        pd_error(x, "jam: error in notein: %s", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+}
+
+// Handle ctl messages: ctl <controller> <value> [channel]
+static void jam_ctl(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
+    lua_State *L = x->L;
+    
+    if (argc < 2) {
+        pd_error(x, "jam: ctl requires at least 2 arguments (controller, value)");
+        return;
+    }
+    
+    // Update io values first
+    update_io(x);
+    
+    // Get ctlin handler
+    lua_getglobal(L, "ctlin");
+    if (!lua_isfunction(L, -1)) {
+        lua_pop(L, 1);
+        return;  // No handler, silently ignore
+    }
+    
+    // Push io table
+    lua_getglobal(L, "io");
+    
+    // Push controller and value
+    lua_pushnumber(L, atom_getfloat(&argv[0]));
+    lua_pushnumber(L, atom_getfloat(&argv[1]));
+    
+    // Push optional channel
+    if (argc >= 3) {
+        lua_pushnumber(L, atom_getfloat(&argv[2]));
+    }
+    
+    // Call ctlin(io, controller, value, [channel])
+    int nargs = argc >= 3 ? 4 : 3;
+    if (lua_pcall(L, nargs, 0, 0) != LUA_OK) {
+        pd_error(x, "jam: error in ctlin: %s", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+}
+
+// Handle list messages: list <function_name> <args>...
+// Routes to any Lua function by name
 static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
     lua_State *L = x->L;
     
@@ -314,36 +393,27 @@ static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
     // Update io values first
     update_io(x);
     
-    // Get the command (first argument should be a symbol)
-    const char *cmd = NULL;
+    // Get the function name (first argument must be a symbol)
+    const char *func_name = NULL;
     if (argv[0].a_type == A_SYMBOL) {
-        cmd = atom_getsymbol(&argv[0])->s_name;
+        func_name = atom_getsymbol(&argv[0])->s_name;
     } else {
-        return;  // First arg must be a symbol
+        pd_error(x, "jam: list messages require a function name (symbol) as first argument");
+        return;
     }
     
-    // Try to find specific handler (notein, ctlin, etc.)
-    char handler_name[64];
-    snprintf(handler_name, sizeof(handler_name), "%sin", cmd);
-    
-    lua_getglobal(L, handler_name);
-    
-    // If no specific handler, try generic msgin
+    // Look up the function in Lua
+    lua_getglobal(L, func_name);
     if (!lua_isfunction(L, -1)) {
         lua_pop(L, 1);
-        lua_getglobal(L, "msgin");
-        
-        // If still no handler, just return
-        if (!lua_isfunction(L, -1)) {
-            lua_pop(L, 1);
-            return;
-        }
+        // Silently ignore if function doesn't exist
+        return;
     }
     
     // Push io table
     lua_getglobal(L, "io");
     
-    // Push remaining arguments (skip the command name for specific handlers)
+    // Push remaining arguments (skip the function name)
     for (int i = 1; i < argc; i++) {
         if (argv[i].a_type == A_FLOAT) {
             lua_pushnumber(L, atom_getfloat(&argv[i]));
@@ -352,9 +422,9 @@ static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
         }
     }
     
-    // Call handler(io, ...)
+    // Call function_name(io, ...)
     if (lua_pcall(L, argc, 0, 0) != LUA_OK) {
-        pd_error(x, "jam: error in %s: %s", handler_name, lua_tostring(L, -1));
+        pd_error(x, "jam: error in %s(): %s", func_name, lua_tostring(L, -1));
         lua_pop(L, 1);
     }
 }
@@ -457,7 +527,11 @@ void jam_setup(void) {
         A_GIMME, 0);
     
     class_addbang(jam_class, jam_bang);
-    class_addlist(jam_class, jam_list);  // Handle list messages
+    class_addlist(jam_class, jam_list);
+    class_addmethod(jam_class, (t_method)jam_note, 
+                    gensym("note"), A_GIMME, 0);
+    class_addmethod(jam_class, (t_method)jam_ctl, 
+                    gensym("ctl"), A_GIMME, 0);
     class_addmethod(jam_class, (t_method)load_jam, 
                     gensym("load"), A_SYMBOL, 0);
     class_addmethod(jam_class, (t_method)jam_reset, 
