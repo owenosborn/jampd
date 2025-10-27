@@ -213,8 +213,32 @@ static void update_io(t_jam *x) {
     lua_pop(L, 1);
 }
 
+// Recreate the Lua state for a clean reload
+static void reset_lua_state(t_jam *x) {
+    // Close old state if it exists
+    if (x->L) {
+        lua_close(x->L);
+    }
+    
+    // Create fresh Lua state
+    x->L = luaL_newstate();
+    luaL_openlibs(x->L);
+    
+    // Store pointer to this object in Lua registry
+    lua_pushlightuserdata(x->L, x);
+    lua_setfield(x->L, LUA_REGISTRYINDEX, "pd_jam_obj");
+    
+    // Set Lua package path to include current directory and lib/
+    lua_getglobal(x->L, "package");
+    lua_pushstring(x->L, "./?.lua;./lib/?.lua");
+    lua_setfield(x->L, -2, "path");
+    lua_pop(x->L, 1);
+}
+
 // Load and initialize a jam file
 static int load_jam(t_jam *x, t_symbol *s) {
+    // Reset Lua state for clean reload
+    reset_lua_state(x);
     lua_State *L = x->L;
    
     // Find path of script and update package path

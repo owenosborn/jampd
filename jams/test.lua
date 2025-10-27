@@ -13,10 +13,6 @@ function msgin(io, ...)
     print("received message")
 end
 
-function thing(io, ...)
-    print("thing")
-end
-
 function notein(io, ...)
     print("received NOTE")
 end
