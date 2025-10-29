@@ -3,6 +3,7 @@
 #include <lualib.h>
 #include <lauxlib.h>
 #include <string.h>
+#include <math.h>
 
 static t_class *jam_class;
 
@@ -154,7 +155,7 @@ static int l_on(lua_State *L) {
     
     double ticks_per_interval = x->tpb * interval;
     long intervals_passed = (long)(tc / ticks_per_interval);
-    long interval_start_tick = (long)(ticks_per_interval * intervals_passed) + 1;
+    long interval_start_tick = (long)ceil((ticks_per_interval * intervals_passed));
     lua_pushboolean(L, tc == interval_start_tick);
 
     return 1;
@@ -326,6 +327,39 @@ static void jam_bang(t_jam *x) {
     }
     
     // Increment counters
+    x->tc++;
+}
+
+// Handle float messages - set tc, call tick, then increment
+static void jam_float(t_jam *x, t_floatarg f) {
+    lua_State *L = x->L;
+    
+    // Set tc from the float input
+    x->tc = (long)f;
+    
+    // Update io values
+    update_io(x);
+    
+    // Call global tick(io)
+    lua_getglobal(L, "tick");
+    if (!lua_isfunction(L, -1)) {
+        lua_pop(L, 1);
+        return;
+    }
+    
+    lua_getglobal(L, "io");
+    
+    if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+        pd_error(x, "jam: error in tick(): %s", lua_tostring(L, -1));
+        // Also send error to info outlet
+        t_atom argv[2];
+        SETSYMBOL(&argv[0], gensym("error"));
+        SETSYMBOL(&argv[1], gensym(lua_tostring(L, -1)));
+        outlet_list(x->info_out, &s_list, 2, argv);
+        lua_pop(L, 1);
+    }
+    
+    // Increment counter so next bang doesn't replay same tick
     x->tc++;
 }
 
@@ -551,6 +585,7 @@ void jam_setup(void) {
         A_GIMME, 0);
     
     class_addbang(jam_class, jam_bang);
+    class_addfloat(jam_class, jam_float);
     class_addlist(jam_class, jam_list);
     class_addmethod(jam_class, (t_method)jam_note, 
                     gensym("note"), A_GIMME, 0);

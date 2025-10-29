@@ -1,21 +1,30 @@
 
 
-require("lib/chord")
-require ("lib/lfo")
 
 function init(io)
-    chord = Chord.new("C-7")
-    chord:print()
-    lfo = LFO.new(21, {rate = 20})
-    count = 0
+    print("COOL")
+    print(io.tpb)
+end
+
+function ctlin(io, ...)
+    print("received CC")
+end
+
+function msgin(io, ...)
+    print("received message")
+end
+
+function notein(io, ...)
+    print("received NOTE")
 end
 
 function tick(io)
-    if io.on(1/4) then
-        count = count + 3
-        count = count % 28
-        io.noteout(chord:note(count, 4), 100, .1)
+    if io.on(1) then
+        io.msgout("onono", 1, 2)
+        io.noteout(60, 0)
+        io.noteout(60, 100)
+        io.noteout(72, 100, .1)
+        io.cltout(30,20)
     end
-    lfo:tick(io)
 end
 
