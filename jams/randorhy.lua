@@ -11,7 +11,7 @@ function tick(io)
     end
 
     if io.on (divs[divi]) then
-        io.noteout(60, 100, .1)
+        io.noteout(60, 100, 1/4)
     end
 
 end

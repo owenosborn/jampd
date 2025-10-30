@@ -45,14 +45,14 @@ function ChordPlayer:play(velocity, duration)
     
     if self.style == "block" then
         -- All notes at once
-        for i = 1, #self.chord.pitches do
+        for i = 1, #self.chord.tones do
             table.insert(self.pending_notes, {0, self.chord:note(i, self.octave), velocity, duration})
         end
         
     elseif self.style == "roll" then
         -- Sequential with delay
         local delay = self.config.delay or 3
-        for i = 1, #self.chord.pitches do
+        for i = 1, #self.chord.tones do
             local offset = (i - 1) * delay
             table.insert(self.pending_notes, {offset, self.chord:note(i, self.octave), velocity, duration})
         end
@@ -62,8 +62,8 @@ function ChordPlayer:play(velocity, duration)
         local delay = self.config.delay or 2
         local reverse = self.config.reverse or false
         local indices = {}
-        for i = 1, #self.chord.pitches do
-            indices[i] = reverse and (#self.chord.pitches - i + 1) or i
+        for i = 1, #self.chord.tones do
+            indices[i] = reverse and (#self.chord.tones - i + 1) or i
         end
         for i, idx in ipairs(indices) do
             local offset = (i - 1) * delay
@@ -73,7 +73,7 @@ function ChordPlayer:play(velocity, duration)
     elseif self.style == "random" then
         -- Random timing within window
         local window = self.config.window or 10
-        for i = 1, #self.chord.pitches do
+        for i = 1, #self.chord.tones do
             local offset = math.random(0, window)
             table.insert(self.pending_notes, {offset, self.chord:note(i, self.octave), velocity, duration})
         end
@@ -81,7 +81,7 @@ function ChordPlayer:play(velocity, duration)
     elseif self.style == "pattern" then
         -- Custom pattern from config
         local pattern = self.config.pattern or {0, 3, 6, 9}
-        for i = 1, math.min(#self.chord.pitches, #pattern) do
+        for i = 1, math.min(#self.chord.tones, #pattern) do
             table.insert(self.pending_notes, {pattern[i], self.chord:note(i, self.octave), velocity, duration})
         end
     end

@@ -2,7 +2,7 @@
 -- Unified chord module combining Chord class and parsing functionality
 -- Converts chord symbols like "C-7", "F#maj7", "Bb7b5" into pitch arrays
 -- Supports major/minor/dim/aug qualities and extensions (6, 7, 9, 11, 13)
--- Example: chord:parse("A-7") sets pitches to [0, 3, 7, 10]
+-- Example: chord:parse("A-7") sets tones to [0, 3, 7, 10]
 
 -- Utility function to split a string by a separator
 function string:split(sep)
@@ -87,26 +87,26 @@ local quality = {
 
 -- Define how to process each extension (adds pitch class intervals with proper octaves)
 local extension = {
-    ["6"] = function(pitches, chord) table.insert(pitches, 9) end,     -- 6th in same octave
-    ["maj7"] = function(pitches, chord) table.insert(pitches, 11) end, -- maj7 in same octave
-    ["7"] = function(pitches, chord) 
+    ["6"] = function(tones, chord) table.insert(tones, 9) end,     -- 6th in same octave
+    ["maj7"] = function(tones, chord) table.insert(tones, 11) end, -- maj7 in same octave
+    ["7"] = function(tones, chord) 
                 if chord.quality == "dim" then
-                    table.insert(pitches, 9)  -- dim7 (actually bb7)
+                    table.insert(tones, 9)  -- dim7 (actually bb7)
                 else
-                    table.insert(pitches, 10) -- dom7
+                    table.insert(tones, 10) -- dom7
                 end
             end,
-    ["9"] = function(pitches, chord) table.insert(pitches, 14) end,    -- 9th = 2nd + octave
-    ["b9"] = function(pitches, chord) table.insert(pitches, 13) end,   -- b9 = b2nd + octave
-    ["11"] = function(pitches, chord) table.insert(pitches, 17) end,   -- 11th = 4th + octave
-    ["#11"] = function(pitches, chord) table.insert(pitches, 18) end,  -- #11 = #4th + octave
-    ["13"] = function(pitches, chord) table.insert(pitches, 21) end,   -- 13th = 6th + octave
-    ["7b5"] = function(pitches, chord) 
-                table.insert(pitches, 10) -- add dom7
-                pitches[3] = 6 -- flatten the 5th
+    ["9"] = function(tones, chord) table.insert(tones, 14) end,    -- 9th = 2nd + octave
+    ["b9"] = function(tones, chord) table.insert(tones, 13) end,   -- b9 = b2nd + octave
+    ["11"] = function(tones, chord) table.insert(tones, 17) end,   -- 11th = 4th + octave
+    ["#11"] = function(tones, chord) table.insert(tones, 18) end,  -- #11 = #4th + octave
+    ["13"] = function(tones, chord) table.insert(tones, 21) end,   -- 13th = 6th + octave
+    ["7b5"] = function(tones, chord) 
+                table.insert(tones, 10) -- add dom7
+                tones[3] = 6 -- flatten the 5th
               end,
-    ["sus4"] = function(pitches, chord) 
-                pitches[2] = 5 -- flatten the 5th
+    ["sus4"] = function(tones, chord) 
+                tones[2] = 5 -- flatten the 5th
               end,
 
 }
@@ -114,7 +114,7 @@ local extension = {
 -- Construct chord from parsed components
 local function construct_chord(chord_data)
     -- Get base triad as pitch classes
-    local pitches = quality[chord_data.quality]()
+    local tones = quality[chord_data.quality]()
 
     -- Apply extensions (keeping proper octaves)
     if chord_data.extension and chord_data.extension ~= "" then
@@ -122,7 +122,7 @@ local function construct_chord(chord_data)
         for _, ext in ipairs(exts) do
             local ext_func = extension[ext]
             if ext_func then
-                ext_func(pitches, chord_data)
+                ext_func(tones, chord_data)
             else
                 print("Warning: Unrecognized extension ".. ext .. ". Skipping.")
             end
@@ -132,7 +132,7 @@ local function construct_chord(chord_data)
     -- Don't normalize to 0-11 anymore - keep octave information
     -- Users can mod 12 if they want true pitch classes
 
-    return pitches
+    return tones
 end
 
 -- Chord class definition
@@ -141,7 +141,7 @@ Chord.__index = Chord
 
 function Chord.new(chord_string)
     local self = setmetatable({}, Chord)
-    self.pitches = {}      -- array of pitches, starting from 0, can be more than one octave for extensions
+    self.tones = {}      -- array of tones, starting from 0, can be more than one octave for extensions
     self.root = 0         -- root note pitch class, 0-11
     self.bass = 0          -- bass note for slash chords, pitch class 0-11
     self.name = ""         -- chord symbol e.g. "A-7"
@@ -158,11 +158,11 @@ function Chord:parse(chord_string)
     -- Parse the chord string
     local parsed = parse_chord_text(chord_string)
 
-    -- Construct the chord pitches
-    local chord_pitches = construct_chord(parsed)
+    -- Construct the chord tones
+    local chord_tones = construct_chord(parsed)
 
     -- Set the chord object's properties
-    self.pitches = chord_pitches
+    self.tones = chord_tones
     self.root = note_to_pitch_class(parsed.root)
     self.bass = parsed.bass and note_to_pitch_class(parsed.bass) or self.root
     self.name = chord_string
@@ -173,8 +173,8 @@ end
 -- Get specific note from chord at given index and octave
 function Chord:note(index, octave)
     octave = octave or 5  -- default to octave 5 (60 = C5)
-    index = ((index - 1) % #self.pitches) + 1
-    return self.pitches[index] + self.root + (octave * 12)
+    index = ((index - 1) % #self.tones) + 1
+    return self.tones[index] + self.root + (octave * 12)
 end
 
 -- Print chord information
@@ -185,12 +185,12 @@ function Chord:print(print_callback)
     local headerFormat = "%-20s | %-6s | %-6s | %-9s"
     local separator = string.rep("-", 50)
     print_callback(separator)
-    print_callback(string.format(headerFormat, "Pitches", "Root", "Bass", "Name"))
+    print_callback(string.format(headerFormat, "tones", "Root", "Bass", "Name"))
     print_callback(separator)
-    local pitches_str = table.concat(self.pitches, ", ")
+    local tones_str = table.concat(self.tones, ", ")
     local info = string.format(
         formatStr,
-        "[" .. pitches_str .. "]",
+        "[" .. tones_str .. "]",
         tostring(self.root),
         tostring(self.bass),
         self.name

@@ -31,7 +31,7 @@ end
 -- Generate note sequence based on pattern and octaves
 function Arpeggio:_generate_sequence()
     self.notes = {}
-    local chord_size = #self.chord.pitches
+    local chord_size = #self.chord.tones
     
     if self.pattern == "up" then
         -- Ascending through octaves

@@ -146,13 +146,13 @@ function Progression:print(print_callback)
     print_callback(separator)
     
     for idx, chord in ipairs(self.chords) do
-        local pitches_str = table.concat(chord.pitches or {}, ", ")
+        local tones_str = table.concat(chord.tones or {}, ", ")
         local formatStr = "%-7s | %-6s | %-20s | %-6s | %-6s | %-9s"
         local info = string.format(
             formatStr,
             tostring(idx),
             tostring(chord.time or 0),
-            "[" .. pitches_str .. "]",
+            "[" .. tones_str .. "]",
             tostring(chord.root or 0),
             tostring(chord.bass or 0),
             chord.name or ""
