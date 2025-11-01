@@ -177,6 +177,44 @@ function Chord:note(index, octave)
     return self.tones[index] + self.root + (octave * 12)
 end
 
+-- Filter a MIDI note to the nearest chord tone
+function Chord:filter(note_in)
+    note_in = math.floor(note_in)  -- ensure integer
+    
+    -- Convert input note to pitch class (0-11)
+    local input_pc = note_in % 12
+    local input_octave = math.floor(note_in / 12)
+    
+    -- Build all possible chord tones across the octave range
+    -- We'll check the octave below, current octave, and octave above
+    local candidates = {}
+    
+    for oct_offset = -1, 1 do
+        local oct = input_octave + oct_offset
+        for i = 1, #self.tones do
+            local candidate = self.tones[i] + self.root + (oct * 12)
+            -- Only consider valid MIDI range (0-127)
+            if candidate >= 0 and candidate <= 127 then
+                table.insert(candidates, candidate)
+            end
+        end
+    end
+    
+    -- Find the closest candidate
+    local closest = candidates[1]
+    local min_distance = math.abs(note_in - closest)
+    
+    for _, candidate in ipairs(candidates) do
+        local distance = math.abs(note_in - candidate)
+        if distance < min_distance then
+            min_distance = distance
+            closest = candidate
+        end
+    end
+    
+    return closest
+end
+
 -- Print chord information
 function Chord:print(print_callback)
     print_callback = print_callback or print
