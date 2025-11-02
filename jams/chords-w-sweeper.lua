@@ -9,7 +9,7 @@ function init(io)
     --progression:parse("G.A.D.D7.")
     progression:parse("G-7.A7.D-9.Db7.")
     progression:print()
-    chord = progression:current()
+    chord = progression:chord()
     count = 0
 end
 

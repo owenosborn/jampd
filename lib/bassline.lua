@@ -1,5 +1,5 @@
 -- lib/bassline.lua
-local Bassline = {}
+Bassline = {}
 Bassline.__index = Bassline
 
 -- helpers
@@ -134,9 +134,11 @@ function Bassline:tick(io)
             local base_ticks = io.dur(self.rate)
             local dur_ticks  = dhuman(math.floor(base_ticks * self.gate), self.humanize)
             local vel        = vhuman(self.vel, self.vel_jitter)
-            io.playNote(note, vel, dur_ticks, self.channel)
+            io.playNote(note, vel, dur_ticks / io.tpb)
         end
     end
 end
 
-return Bassline
+return {
+    Bassline = Bassline
+}

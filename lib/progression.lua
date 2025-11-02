@@ -23,7 +23,7 @@ function Progression:add(chord, beats)
 end
 
 -- Get current chord
-function Progression:current()
+function Progression:chord()
     if #self.chords == 0 then return nil end
     return self.chords[self.index]
 end

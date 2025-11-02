@@ -1,7 +1,6 @@
 
 require("lib/chord")
 require("lib/progression")
-require("lib/bassline")
  
 function init(io)
     print("hi")
@@ -11,15 +10,6 @@ function init(io)
     chord = progression:chord()
     sweeplast = 0
     sweep = 0
-    -- Bassline
-    bass = Bassline.new({
-        octave = 3,
-        velocity = 78,
-        vel_jitter = 10,
-        gate = 0.85,
-        humanize = 0.06,
-        rate = 1/2,           -- quarter notes
-    }):setStyle("octave", {sync_prob = 0.65})  -- try "pulse", "octave", "walk", or "sync"
 end
 
 function ctlin(io, n, v) 
@@ -32,13 +22,8 @@ function tick(io)
     
     chord = progression:tick(io)
    
-    if progression:isnew() then
-        bass:update_chord(chord)
-    end
-    bass:tick(io)
-
     if io.on(1/1) then
-    --    io.noteout(chord:note(1, 3), 100, 1)
+        io.noteout(chord:note(1, 3), 100, 1)
     end
 
     if io.on(1/8) and math.random() > 0 then
