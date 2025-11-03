@@ -61,8 +61,8 @@ static int l_noteout(lua_State *L) {
     return 0;
 }
 
-// Lua C function to implement io.cltout()
-static int l_cltout(lua_State *L) {
+// Lua C function to implement io.ctlout()
+static int l_ctlout(lua_State *L) {
     lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
     t_jam *x = (t_jam *)lua_touserdata(L, -1);
     lua_pop(L, 1);
@@ -185,8 +185,8 @@ static void init_io(t_jam *x) {
     lua_pushcfunction(L, l_noteout);
     lua_setfield(L, -2, "noteout");
     
-    lua_pushcfunction(L, l_cltout);
-    lua_setfield(L, -2, "cltout");
+    lua_pushcfunction(L, l_ctlout);
+    lua_setfield(L, -2, "ctlout");
  
     lua_pushcfunction(L, l_msgout);
     lua_setfield(L, -2, "msgout");
