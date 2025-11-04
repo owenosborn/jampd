@@ -6,12 +6,12 @@ end
 
 function tick(io)
 
-    if io.on(1) then 
+    if jam.on(1) then 
         divi = math.random(1, #divs)
     end
 
-    if io.on (divs[divi]) then
-        io.noteout(60, 100, 1/4)
+    if jam.on (divs[divi]) then
+        jam.noteout(60, 100, 1/4)
     end
 
 end

@@ -3,11 +3,11 @@
 require("lib/chord")
 
 function init(io)
-    div = io.tpb
+    div = jam.tpb
 end
 
 function tick(io)
-    local beat = io.tc / io.tpb
+    local beat = jam.tc / jam.tpb
     local duration = 16
     
     local progress = math.min(beat / duration, 1)
@@ -16,8 +16,8 @@ function tick(io)
 
     div = div - 1 
     if div <= 0  then
-        div = (io.tpb * rate)//1
-        io.noteout(60, 100, 0.1)
+        div = (jam.tpb * rate)//1
+        jam.noteout(60, 100, 0.1)
     end
 
 end

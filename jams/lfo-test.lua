@@ -8,8 +8,8 @@ end
 
 function tick(io)
 
-    if io.on(1) then 
-        io.noteout(60, 100, .1)
+    if jam.on(1) then 
+        jam.noteout(60, 100, .1)
     end
 
     lfo:tick(io)

@@ -12,13 +12,13 @@ end
 
 function tick(io)
 
-    if io.on(1) then 
+    if jam.on(1) then 
         divi = math.random(1, #divs)
         ci = math.random(1, #chord.tones)
     end
 
-    if io.on (divs[divi]) then
-        io.noteout(chord:note(ci, 4), 100, 1/4)
+    if jam.on (divs[divi]) then
+        jam.noteout(chord:note(ci, 4), 100, 1/4)
     end
 
 end

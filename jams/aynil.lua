@@ -15,17 +15,17 @@ function tick(io)
     
     chord = progression:tick(io)
    
-    if io.on(1/1) then
-        io.noteout(chord:note(1, 3), 100, 1)
+    if jam.on(1/1) then
+        jam.noteout(chord:note(1, 3), 100, 1)
         count = 0
     end
 
-    if io.on(1/6) then 
+    if jam.on(1/6) then 
         note = chord:note(count % #chord.tones + 1, count // #chord.tones)
         count = count + 1
         max = 4 * #chord.tones 
         if count > max then count = 0 end
-        io.noteout(note + 60, 50, .1)
+        jam.noteout(note + 60, 50, .1)
     end
 
 end

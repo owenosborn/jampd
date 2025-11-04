@@ -1,14 +1,14 @@
--- lib/arpeggio.lua
+-- lib/arpeggjam.lua
 -- Arpeggio utility for generating note sequences from chords
 -- Supports up, down, updown, downup, and random patterns
 -- Can span multiple octaves and control note timing
--- Example: arp = Arpeggio.new(chord, "updown", 2); arp:tick(io)
+-- Example: arp = Arpeggjam.new(chord, "updown", 2); arp:tick(io)
 
 local Arpeggio = {}
-Arpeggio.__index = Arpeggio
+Arpeggjam.__index = Arpeggio
 
 -- Create new arpeggio from chord
-function Arpeggio.new(chord, pattern, octaves, octave_base)
+function Arpeggjam.new(chord, pattern, octaves, octave_base)
     local self = setmetatable({}, Arpeggio)
     
     self.chord = chord or require("lib/chord").Chord.new():parse("Cmaj7")
@@ -102,7 +102,7 @@ function Arpeggio:play(velocity, note_duration, step_interval, io)
     
     self.active = true
     self.index = 1
-    self.start_tick = io.tc  -- Sync to global tick count
+    self.start_tick = jam.tc  -- Sync to global tick count
     return self
 end
 
@@ -147,14 +147,14 @@ function Arpeggio:tick(io)
     end
     
     -- Calculate which note should be playing based on global tick count
-    local ticks_since_start = io.tc - self.start_tick
+    local ticks_since_start = jam.tc - self.start_tick
     local note_position = math.floor(ticks_since_start / self.step_interval)
     local expected_index = (note_position % #self.notes) + 1
     
     -- Check if we should play a note on this exact tick
     if ticks_since_start % self.step_interval == 0 and ticks_since_start >= 0 then
         local note = self.notes[expected_index]
-        io.playNote(note, self.velocity, self.note_duration)
+        jam.playNote(note, self.velocity, self.note_duration)
     end
     
     -- Update current index for reference

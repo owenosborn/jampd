@@ -68,8 +68,8 @@ function Note:print_row(index)
 end
 
 function Note:play(io, c)
-    local ch = c or self.channel or io.ch
-    io.playNote(self.number, self.velocity, self.duration, ch)
+    local ch = c or self.channel or jam.ch
+    jam.playNote(self.number, self.velocity, self.duration, ch)
 end
 
 return {

@@ -23,28 +23,28 @@ function tick(io)
     local current_chord = progression:tick(io)
     -- Alternating bass pattern (classic country style)
     -- Root on odd beats, fifth on even beats
-    if io.on(2) then
+    if jam.on(2) then
         local bass_note = current_chord:note(1, 3)
-        io.noteout(bass_note, 90, 0.9)
+        jam.noteout(bass_note, 90, 0.9)
     end
 
-    if io.on(2,1) then
+    if jam.on(2,1) then
         local bass_note = current_chord:note(3, 3)
-        io.noteout(bass_note - 12, 90, 0.9)
+        jam.noteout(bass_note - 12, 90, 0.9)
     end
 
     -- Chord hits on strong beats
-    if io.on(2, 1.05) then  -- every 2 beats
-        io.noteout(current_chord:note(1, 4), 70, 0.4)
-        io.noteout(current_chord:note(2, 4), 70, 0.4)
-        io.noteout(current_chord:note(3, 4), 70, 0.4)
+    if jam.on(2, 1.05) then  -- every 2 beats
+        jam.noteout(current_chord:note(1, 4), 70, 0.4)
+        jam.noteout(current_chord:note(2, 4), 70, 0.4)
+        jam.noteout(current_chord:note(3, 4), 70, 0.4)
     end
     
     -- Simple melody fills on off-beats
-    if io.on(0.5, 0.25) then  -- syncopated eighth notes
+    if jam.on(0.5, 0.25) then  -- syncopated eighth notes
         if math.random() < 0.3 then  -- sparse, not every time
             local note = random_melody_note()
-            io.noteout(note, math.random(60, 85), 0.4)
+            jam.noteout(note, math.random(60, 85), 0.4)
         end
     end
 end

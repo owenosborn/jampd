@@ -13,7 +13,7 @@ end
 
 function tick(io)
     -- Calculate current position in beats
-    local beats = io.tc / io.tpb
+    local beats = jam.tc / jam.tpb
     
     -- Calculate LFO values using sine wave (oscillating 0-127)
     -- sin gives -1 to 1, so we scale to 0-127
@@ -22,10 +22,10 @@ function tick(io)
     local lfo3 = math.floor((math.sin(2 * math.pi * beats / rate3) + 1) / 2 * 127)
     
     -- Send out CC messages x times per beat to avoid overwhelming MIDI
-    if io.on(.1) then
-        io.cltout(21, lfo1)
-        io.cltout(22, lfo2)
-        io.cltout(23, lfo3)
+    if jam.on(.1) then
+        jam.cltout(21, lfo1)
+        jam.cltout(22, lfo2)
+        jam.cltout(23, lfo3)
     end
 end
 

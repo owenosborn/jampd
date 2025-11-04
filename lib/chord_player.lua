@@ -96,7 +96,7 @@ function ChordPlayer:tick(io)
         for i = #self.pending_notes, 1, -1 do
             local note_data = self.pending_notes[i]
             if note_data[1] == current_offset then
-                io.playNote(note_data[2], note_data[3], note_data[4])
+                jam.playNote(note_data[2], note_data[3], note_data[4])
                 table.remove(self.pending_notes, i)
             end
         end

@@ -57,7 +57,7 @@ function LFO.new(cc_number, config)
     self.rate = config.rate or 16      -- Beats per cycle
     self.wave = config.wave or "sine"  -- Waveform type
     self.phase = config.phase or 0     -- Initial phase (0-1)
-    self.channel = config.channel      -- MIDI channel (nil = use io.ch)
+    self.channel = config.channel      -- MIDI channel (nil = use jam.ch)
     self.update_rate = config.update_rate or 0.1  -- Send CC every N beats (default 0.1)
     
     self.last_value = nil              -- For random waveform
@@ -101,7 +101,7 @@ end
 
 -- Get current LFO value (0-1 normalized)
 function LFO:getValue(io)
-    local beats = io.tc / io.tpb
+    local beats = jam.tc / jam.tpb
     local phase = ((beats / self.rate) + self.phase) % 1
     
     -- Get raw waveform value (-1 to 1)
@@ -126,20 +126,20 @@ end
 -- Call every tick to send CC messages
 function LFO:tick(io)
     -- Only send at update_rate intervals to avoid MIDI spam
-    if io.on(self.update_rate) then
+    if jam.on(self.update_rate) then
         local value = math.floor(self:getScaled(io) + 0.5)  -- Round to nearest int
         
         -- Only send if value changed
         if value ~= self.last_cc_value then
             if self.channel then
-                -- Use specified channel (need to temporarily override io.ch)
-                local old_ch = io.ch
-                io.ch = self.channel
-                io.cltout(self.cc, value)
-                io.ch = old_ch
+                -- Use specified channel (need to temporarily override jam.ch)
+                local old_ch = jam.ch
+                jam.ch = self.channel
+                jam.cltout(self.cc, value)
+                jam.ch = old_ch
             else
-                -- Use current io.ch
-                io.cltout(self.cc, value)
+                -- Use current jam.ch
+                jam.cltout(self.cc, value)
             end
             
             self.last_cc_value = value

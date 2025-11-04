@@ -49,7 +49,7 @@ function Progression:tick(io)
     if #self.chords == 0 then return nil end
     
     -- Convert current playhead to beats for comparison
-    local playhead_beats = self.playhead / io.tpb
+    local playhead_beats = self.playhead / jam.tpb
     
     -- Store previous chord_changed state
     local was_changed = self.chord_changed

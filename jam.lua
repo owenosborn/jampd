@@ -22,13 +22,13 @@ function tick(io)
     
     chord = progression:tick(io)
    
-    if io.on(1/1) then
-        io.noteout(chord:note(1, 3), 100, 1)
+    if jam.on(1/1) then
+        jam.noteout(chord:note(1, 3), 100, 1)
     end
 
-    if io.on(1/8) and math.random() > 0 then
+    if jam.on(1/8) and math.random() > 0 then
         if sweep ~= sweeplast then
-            io.noteout(sweep, 60, .1)
+            jam.noteout(sweep, 60, .1)
             sweeplast = sweep
         end
     end 
