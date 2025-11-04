@@ -1,23 +1,23 @@
 
 
 
-function init(io)
+function init(jam)
     print("COOL")
 end
 
-function ctlin(io, ...)
+function ctlin(jam, ...)
     print("received CC")
 end
 
-function msgin(io, ...)
+function msgin(jam, ...)
     print("received message")
 end
 
-function notein(io, ...)
+function notein(jam, ...)
     print("received NOTE")
 end
 
-function tick(io)
+function tick(jam)
     if jam.on(1) then
         jam.msgout("onono", 1, 2)
         jam.noteout(60, 0)

@@ -45,7 +45,7 @@ function Progression:scale(factor)
 end
 
 -- Advance the playhead
-function Progression:tick(io)
+function Progression:tick(jam)
     if #self.chords == 0 then return nil end
     
     -- Convert current playhead to beats for comparison

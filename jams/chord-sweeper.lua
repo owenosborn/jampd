@@ -2,7 +2,7 @@
 require("lib/chord")
 require("lib/progression")
  
-function init(io)
+function init(jam)
     print("hi")
     progression = Progression.new()
     progression:parse("G-7.A7.D-9.Db7.")
@@ -12,15 +12,15 @@ function init(io)
     sweep = 0
 end
 
-function ctlin(io, n, v) 
+function ctlin(jam, n, v) 
     if n == 33 then 
         sweep = chord:filter(v)
     end
 end
 
-function tick(io)
+function tick(jam)
     
-    chord = progression:tick(io)
+    chord = progression:tick(jam)
    
     if jam.on(1/1) then
         jam.noteout(chord:note(1, 3), 100, 1)

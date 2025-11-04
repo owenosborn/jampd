@@ -1,5 +1,5 @@
 
-function init(io)
+function init(jam)
     -- A minor scale (relative to root note)
     scale = {0, 2, 3, 5, 7, 8, 10}  -- A, B, C, D, E, F, G
     root = 57  -- A3 as root note
@@ -28,7 +28,7 @@ function random_note(octave_min, octave_max)
     return root + degree + octave_offset
 end
 
-function tick(io)
+function tick(jam)
     -- Play bass notes
     if jam.on(bass_rate) then
         local note = random_note(bass_octave_range[1], bass_octave_range[2])

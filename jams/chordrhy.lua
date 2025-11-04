@@ -1,7 +1,7 @@
 
 require("lib/chord")
 
-function init(io)
+function init(jam)
     print("hi")
     chord = Chord.new("C-7")
     chord:print()
@@ -10,7 +10,7 @@ function init(io)
     ci = 1
 end
 
-function tick(io)
+function tick(jam)
 
     if jam.on(1) then 
         divi = math.random(1, #divs)

@@ -88,7 +88,7 @@ function ChordPlayer:play(velocity, duration)
 end
 
 -- Call every tick to handle scheduled notes
-function ChordPlayer:tick(io)
+function ChordPlayer:tick(jam)
     if self.trigger_tick >= 0 then
         -- Check for notes to play this tick
         local current_offset = self.trigger_tick

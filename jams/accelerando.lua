@@ -2,11 +2,11 @@
 
 require("lib/chord")
 
-function init(io)
+function init(jam)
     div = jam.tpb
 end
 
-function tick(io)
+function tick(jam)
     local beat = jam.tc / jam.tpb
     local duration = 16
     

@@ -1,16 +1,16 @@
 
 require ("lib/lfo")
 
-function init(io)
+function init(jam)
     lfo = LFO.new(21, {rate = 20})
     lfo:print()
 end
 
-function tick(io)
+function tick(jam)
 
     if jam.on(1) then 
         jam.noteout(60, 100, .1)
     end
 
-    lfo:tick(io)
+    lfo:tick(jam)
 end

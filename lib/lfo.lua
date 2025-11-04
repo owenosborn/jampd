@@ -1,7 +1,7 @@
 -- lib/lfo.lua
 -- Simple LFO (Low Frequency Oscillator) for sending MIDI CC messages
 -- Supports sine, triangle, square, saw, and random waveforms
--- Example: lfo = LFO.new(21, {rate = 16, wave = "sine"}); lfo:tick(io)
+-- Example: lfo = LFO.new(21, {rate = 16, wave = "sine"}); lfo:tick(jam)
 
 LFO = {}
 LFO.__index = LFO
@@ -100,7 +100,7 @@ function LFO:setPhase(phase)
 end
 
 -- Get current LFO value (0-1 normalized)
-function LFO:getValue(io)
+function LFO:getValue(jam)
     local beats = jam.tc / jam.tpb
     local phase = ((beats / self.rate) + self.phase) % 1
     
@@ -118,16 +118,16 @@ function LFO:getValue(io)
 end
 
 -- Get current LFO value scaled to min/max range
-function LFO:getScaled(io)
-    local normalized = self:getValue(io)
+function LFO:getScaled(jam)
+    local normalized = self:getValue(jam)
     return self.min + (normalized * (self.max - self.min))
 end
 
 -- Call every tick to send CC messages
-function LFO:tick(io)
+function LFO:tick(jam)
     -- Only send at update_rate intervals to avoid MIDI spam
     if jam.on(self.update_rate) then
-        local value = math.floor(self:getScaled(io) + 0.5)  -- Round to nearest int
+        local value = math.floor(self:getScaled(jam) + 0.5)  -- Round to nearest int
         
         -- Only send if value changed
         if value ~= self.last_cc_value then

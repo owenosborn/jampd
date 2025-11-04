@@ -1,5 +1,5 @@
 
-function init(io)
+function init(jam)
     local Progression = require("lib/progression").Progression
     
     progression = Progression.new()
@@ -19,8 +19,8 @@ function random_melody_note()
     return root + degree + octave_offset + 12  -- up an octave for melody
 end
 
-function tick(io)
-    local current_chord = progression:tick(io)
+function tick(jam)
+    local current_chord = progression:tick(jam)
     -- Alternating bass pattern (classic country style)
     -- Root on odd beats, fifth on even beats
     if jam.on(2) then

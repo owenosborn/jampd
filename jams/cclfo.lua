@@ -1,5 +1,5 @@
 
-function init(io)
+function init(jam)
     -- LFO rates in beats per cycle
     rate1 = 160    -- CC 21: 160 beats per cycle
     rate2 = 140    -- CC 22: 140 beats per cycle
@@ -11,7 +11,7 @@ function init(io)
     print("CC 23: " .. rate3 .. " beats/cycle")
 end
 
-function tick(io)
+function tick(jam)
     -- Calculate current position in beats
     local beats = jam.tc / jam.tpb
     

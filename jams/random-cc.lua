@@ -1,10 +1,10 @@
 
  
-function init(io)
+function init(jam)
     print("hi")
 end
 
-function tick(io)
+function tick(jam)
     
 
     if jam.on(1/8) and math.random() > 0 then

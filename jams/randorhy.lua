@@ -1,10 +1,10 @@
-function init(io)
+function init(jam)
     print("hi")
     divs = {1/2, 1/4, 1/8, 1}
     divi = 1
 end
 
-function tick(io)
+function tick(jam)
 
     if jam.on(1) then 
         divi = math.random(1, #divs)

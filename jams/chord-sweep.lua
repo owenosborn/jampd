@@ -1,14 +1,14 @@
 
 require("lib/chord")
 
-function init(io)
+function init(jam)
     print("hi")
     chord = Chord.new("C-7")
     chord:print()
     count = 0
 end
 
-function tick(io)
+function tick(jam)
     
     if jam.on(1/8) then 
         note = chord:note(count % #chord.tones + 1, count // #chord.tones)
