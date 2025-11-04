@@ -17,7 +17,7 @@ typedef struct _jam {
     long tc;               // tick counter
 } t_jam;
 
-// Lua C function to implement io.noteout()
+// Lua C function to implement jam.noteout()
 static int l_noteout(lua_State *L) {
     // Get the jam object from registry
     lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
@@ -29,11 +29,11 @@ static int l_noteout(lua_State *L) {
     int velocity = luaL_checkinteger(L, 2);
     double duration_beats = luaL_optnumber(L, 3, 0.0);
     
-    // Get channel from io.ch
-    lua_getglobal(L, "io");
+    // Get channel from jam.ch
+    lua_getglobal(L, "jam");
     lua_getfield(L, -1, "ch");
     int channel = (int)lua_tonumber(L, -1);
-    lua_pop(L, 2);  // pop channel and io table
+    lua_pop(L, 2);  // pop channel and jam table
     
     if (duration_beats > 0) {
         // Calculate duration in milliseconds from beats
@@ -61,7 +61,7 @@ static int l_noteout(lua_State *L) {
     return 0;
 }
 
-// Lua C function to implement io.ctlout()
+// Lua C function to implement jam.ctlout()
 static int l_ctlout(lua_State *L) {
     lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
     t_jam *x = (t_jam *)lua_touserdata(L, -1);
@@ -70,8 +70,8 @@ static int l_ctlout(lua_State *L) {
     int controller = luaL_checkinteger(L, 1);
     int value = luaL_checkinteger(L, 2);
     
-    // Get channel from io.ch
-    lua_getglobal(L, "io");
+    // Get channel from jam.ch
+    lua_getglobal(L, "jam");
     lua_getfield(L, -1, "ch");
     int channel = (int)lua_tonumber(L, -1);
     lua_pop(L, 2);
@@ -87,7 +87,7 @@ static int l_ctlout(lua_State *L) {
     return 0;
 }
 
-// Lua C function to implement io.msgout()
+// Lua C function to implement jam.msgout()
 static int l_msgout(lua_State *L) {
     lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
     t_jam *x = (t_jam *)lua_touserdata(L, -1);
@@ -138,7 +138,7 @@ static int l_print(lua_State *L) {
     return 0;
 }
 
-// Lua C function to implement io.on()
+// Lua C function to implement jam.on()
 static int l_on(lua_State *L) {
     lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
     t_jam *x = (t_jam *)lua_touserdata(L, -1);
@@ -161,11 +161,11 @@ static int l_on(lua_State *L) {
     return 1;
 }
 
-// Initialize the io table in Lua
-static void init_io(t_jam *x) {
+// Initialize the jam table in Lua
+static void init_jam(t_jam *x) {
     lua_State *L = x->L;
     
-    // Create io table
+    // Create jam table
     lua_newtable(L);
     
     // Set properties
@@ -194,19 +194,19 @@ static void init_io(t_jam *x) {
     lua_pushcfunction(L, l_on);
     lua_setfield(L, -2, "on");
     
-    // Store io as global
-    lua_setglobal(L, "io");
+    // Store jam as global
+    lua_setglobal(L, "jam");
     
     // Override global print to use our outlet
     lua_pushcfunction(L, l_print);
     lua_setglobal(L, "print");
 }
 
-// Update io values before each tick
-static void update_io(t_jam *x) {
+// Update jam values before each tick
+static void update_jam(t_jam *x) {
     lua_State *L = x->L;
     
-    lua_getglobal(L, "io");
+    lua_getglobal(L, "jam");
     if (lua_istable(L, -1)) {
         lua_pushinteger(L, x->tc);
         lua_setfield(L, -2, "tc");
@@ -277,13 +277,13 @@ static int load_jam(t_jam *x, t_symbol *s) {
     // Pop any return value from the script (we don't use it)
     lua_settop(L, 0);
     
-    // Initialize the io table (this also overrides print)
-    init_io(x);
+    // Initialize the jam table (this also overrides print)
+    init_jam(x);
     
-    // Call global init(io) if it exists
+    // Call global init(jam) if it exists
     lua_getglobal(L, "init");
     if (lua_isfunction(L, -1)) {
-        lua_getglobal(L, "io");
+        lua_getglobal(L, "jam");
         
         if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
             pd_error(x, "jam: error in init(): %s", lua_tostring(L, -1));
@@ -304,17 +304,17 @@ static int load_jam(t_jam *x, t_symbol *s) {
 static void jam_bang(t_jam *x) {
     lua_State *L = x->L;
     
-    // Update io values
-    update_io(x);
+    // Update jam values
+    update_jam(x);
     
-    // Call global tick(io)
+    // Call global tick(jam)
     lua_getglobal(L, "tick");
     if (!lua_isfunction(L, -1)) {
         lua_pop(L, 1);
         return;
     }
     
-    lua_getglobal(L, "io");
+    lua_getglobal(L, "jam");
     
     if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
         pd_error(x, "jam: error in tick(): %s", lua_tostring(L, -1));
@@ -337,17 +337,17 @@ static void jam_float(t_jam *x, t_floatarg f) {
     // Set tc from the float input
     x->tc = (long)f;
     
-    // Update io values
-    update_io(x);
+    // Update jam values
+    update_jam(x);
     
-    // Call global tick(io)
+    // Call global tick(jam)
     lua_getglobal(L, "tick");
     if (!lua_isfunction(L, -1)) {
         lua_pop(L, 1);
         return;
     }
     
-    lua_getglobal(L, "io");
+    lua_getglobal(L, "jam");
     
     if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
         pd_error(x, "jam: error in tick(): %s", lua_tostring(L, -1));
@@ -372,8 +372,8 @@ static void jam_note(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
         return;
     }
     
-    // Update io values first
-    update_io(x);
+    // Update jam values first
+    update_jam(x);
     
     // Get notein handler
     lua_getglobal(L, "notein");
@@ -382,8 +382,8 @@ static void jam_note(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
         return;  // No handler, silently ignore
     }
     
-    // Push io table
-    lua_getglobal(L, "io");
+    // Push jam table
+    lua_getglobal(L, "jam");
     
     // Push note and velocity
     lua_pushnumber(L, atom_getfloat(&argv[0]));
@@ -394,7 +394,7 @@ static void jam_note(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
         lua_pushnumber(L, atom_getfloat(&argv[2]));
     }
     
-    // Call notein(io, note, velocity, [channel])
+    // Call notein(jam, note, velocity, [channel])
     int nargs = argc >= 3 ? 4 : 3;
     if (lua_pcall(L, nargs, 0, 0) != LUA_OK) {
         pd_error(x, "jam: error in notein: %s", lua_tostring(L, -1));
@@ -411,8 +411,8 @@ static void jam_ctl(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
         return;
     }
     
-    // Update io values first
-    update_io(x);
+    // Update jam values first
+    update_jam(x);
     
     // Get ctlin handler
     lua_getglobal(L, "ctlin");
@@ -421,8 +421,8 @@ static void jam_ctl(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
         return;  // No handler, silently ignore
     }
     
-    // Push io table
-    lua_getglobal(L, "io");
+    // Push jam table
+    lua_getglobal(L, "jam");
     
     // Push controller and value
     lua_pushnumber(L, atom_getfloat(&argv[0]));
@@ -433,7 +433,7 @@ static void jam_ctl(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
         lua_pushnumber(L, atom_getfloat(&argv[2]));
     }
     
-    // Call ctlin(io, controller, value, [channel])
+    // Call ctlin(jam, controller, value, [channel])
     int nargs = argc >= 3 ? 4 : 3;
     if (lua_pcall(L, nargs, 0, 0) != LUA_OK) {
         pd_error(x, "jam: error in ctlin: %s", lua_tostring(L, -1));
@@ -448,8 +448,8 @@ static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
     
     if (argc < 1) return;
     
-    // Update io values first
-    update_io(x);
+    // Update jam values first
+    update_jam(x);
     
     // Get the function name (first argument must be a symbol)
     const char *func_name = NULL;
@@ -468,8 +468,8 @@ static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
         return;
     }
     
-    // Push io table
-    lua_getglobal(L, "io");
+    // Push jam table
+    lua_getglobal(L, "jam");
     
     // Push remaining arguments (skip the function name)
     for (int i = 1; i < argc; i++) {
@@ -480,7 +480,7 @@ static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
         }
     }
     
-    // Call function_name(io, ...)
+    // Call function_name(jam, ...)
     if (lua_pcall(L, argc, 0, 0) != LUA_OK) {
         pd_error(x, "jam: error in %s(): %s", func_name, lua_tostring(L, -1));
         lua_pop(L, 1);
@@ -499,9 +499,9 @@ static void jam_bpm(t_jam *x, t_floatarg f) {
     if (f > 0) {
         x->bpm = f;
         
-        // Update io.bpm in Lua
+        // Update jam.bpm in Lua
         lua_State *L = x->L;
-        lua_getglobal(L, "io");
+        lua_getglobal(L, "jam");
         if (lua_istable(L, -1)) {
             lua_pushnumber(L, x->bpm);
             lua_setfield(L, -2, "bpm");
@@ -517,9 +517,9 @@ static void jam_tpb(t_jam *x, t_floatarg f) {
     if (f > 0) {
         x->tpb = f;
         
-        // Update io.tpb in Lua
+        // Update jam.tpb in Lua
         lua_State *L = x->L;
-        lua_getglobal(L, "io");
+        lua_getglobal(L, "jam");
         if (lua_istable(L, -1)) {
             lua_pushnumber(L, x->tpb);
             lua_setfield(L, -2, "tpb");

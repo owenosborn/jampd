@@ -30,7 +30,7 @@
 #X connect 9 1 10 0;
 #X restore 54 100 pd tempo;
 #X obj 51 45 tgl 19 0 empty empty empty 0 -10 0 12 #fcfcfc #000000 #000000 0 1;
-#X obj 114 33 hsl 162 19 10 300 0 0 empty empty empty -2 -10 0 12 #fcfcfc #000000 #000000 0 1;
+#X obj 132 35 hsl 162 19 10 300 0 0 empty empty empty -2 -10 0 12 #fcfcfc #000000 #000000 0 1;
 #X floatatom 108 66 5 0 0 0 - - - 0;
 #X msg 126 137 bpm \$1;
 #X msg 459 118 load /Users/owen/repos/jampd/jam.lua;
@@ -100,4 +100,3 @@
 #X connect 35 0 36 0;
 #X connect 36 0 37 0;
 #X connect 37 0 2 0;
-#X connect 37 0 28 0;
