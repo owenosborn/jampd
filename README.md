@@ -6,41 +6,41 @@ Jam is a Pure Data external that embeds a Lua interpreter for creating algorithm
 ## Core Concept
 
 Jam scripts follow a simple lifecycle:
-- **`init(io)`** - Called once when the script loads
-- **`tick(io)`** - Called on every timing tick
+- **`init(jam)`** - Called once when the script loads
+- **`tick(jam)`** - Called on every timing tick
 - **Input handlers** - Called when MIDI or other messages arrive
 
-The `io` object provides timing information and functions to generate musical output.
+The `jam` object provides timing information and functions to generate musical output.
 
-## The IO Object
+## The jam Object
 
 ### Timing Properties
-- **`io.tpb`** - Ticks per beat (default: 180, configurable)
-- **`io.bpm`** - Beats per minute (default: 100)
-- **`io.tc`** - Global tick counter (starts at 0, increments each tick)
-- **`io.ch`** - MIDI output channel (default: 1)
+- **`jam.tpb`** - Ticks per beat (default: 180, configurable)
+- **`jam.bpm`** - Beats per minute (default: 100)
+- **`jam.tc`** - Global tick counter (starts at 0, increments each tick)
+- **`jam.ch`** - MIDI output channel (default: 1)
 
 ### Core Functions
 
-#### `io.on(interval, offset)`
+#### `jam.on(interval, offset)`
 Returns true when the current tick aligns with a rhythmic interval.
 
 ```lua
-io.on(1)       -- Every beat
-io.on(1/4)     -- Every quarter beat (sixteenth notes)
-io.on(2)       -- Every 2 beats
-io.on(1, 1/2)  -- Every beat, offset by half a beat
+jam.on(1)       -- Every beat
+jam.on(1/4)     -- Every quarter beat (sixteenth notes)
+jam.on(2)       -- Every 2 beats
+jam.on(1, 1/2)  -- Every beat, offset by half a beat
 ```
 
 - **`interval`** - Number of beats between triggers (default: 1)
 - **`offset`** - Beat offset for rhythmic displacement (default: 0)
 
-#### `io.noteout(note, velocity, duration)`
+#### `jam.noteout(note, velocity, duration)`
 Send a note to Pure Data's left outlet.
 Duration is in beats, and is optional.  If duration is provided, the note will be output as makenote with duration converted to ms.
 
 ```lua
-io.noteout(60, 100, 1)      -- C4, velocity 100, 1 beat duration
+jam.noteout(60, 100, 1)      -- C4, velocity 100, 1 beat duration
 ```
 
 - **`note`** - MIDI note number (0-127)
@@ -50,11 +50,11 @@ io.noteout(60, 100, 1)      -- C4, velocity 100, 1 beat duration
 Output format no duration: `note [note] [velocity] [channel]`
 Output format with duration: `makenote [note] [velocity] [duration] [channel]`
 
-#### `io.ctlout(controller, value)`
+#### `jam.ctlout(controller, value)`
 Send a MIDI CC message.
 
 ```lua
-io.ctlout(7, 64)      -- Volume to 64 on output channel
+jam.ctlout(7, 64)      -- Volume to 64 on output channel
 ```
 
 Output format: `ctl [controller] [value] [channel]`
@@ -63,41 +63,41 @@ Output format: `ctl [controller] [value] [channel]`
 
 Jam scripts can respond to incoming messages by implementing handler functions:
 
-### `notein(io, note, velocity)`
+### `notein(jam, note, velocity)`
 Called when a note message arrives.
 
 ```lua
-function notein(io, note, velocity)
+function notein(jam, note, velocity)
     -- Process incoming note
 end
 ```
 
-### `ctlin(io, controller, value)`
+### `ctlin(jam, controller, value)`
 Called when a CC message arrives.
 
 ```lua
-function ctlin(io, controller, value)
+function ctlin(jam, controller, value)
     -- Process incoming CC
 end
 ```
 
-### `msgin(io, ...)`
+### `msgin(jam, ...)`
 Generic fallback for any unhandled list messages.
 
 ## Basic Jam Structure
 
 ```lua
 
-function init(io)
+function init(jam)
     -- Initialize your musical process
 end
 
-function tick(io)
+function tick(jam)
     -- Called every tick - generate music here
 end
 
 -- Optional: respond to incoming messages
-function notein(io, note, velocity)
+function notein(jam, note, velocity)
     -- Process incoming MIDI
 end
 
@@ -129,8 +129,8 @@ end
 
 Jam provides a **minimal timing and I/O foundation** upon which any musical process can be built:
 
-- **Tick-based timing** - Precise rhythmic control via `io.on()`
-- **Bidirectional MIDI** - Generate notes via `io.noteout()`, respond via `notein()`
+- **Tick-based timing** - Precise rhythmic control via `jam.on()`
+- **Bidirectional MIDI** - Generate notes via `jam.noteout()`, respond via `notein()`
 - **Lua flexibility** - Full programming language for algorithms, state, randomness
 - **Hot-reloadable** - Edit scripts and reload without restarting Pure Data
 
