@@ -250,14 +250,18 @@ static int load_jam(t_jam *x, t_symbol *s) {
     if (last_slash) {
         *last_slash = '\0';  // Truncate to directory
         
-        // Update package.path to include the script's directory
+        // Update package.path to include:
+        // 1. The script's directory
+        // 2. The script's directory + /lib
+        // 3. Current working directory (where the external is)
+        // 4. Current working directory + /lib
         lua_getglobal(L, "package");
         lua_getfield(L, -1, "path");
         const char *current_path = lua_tostring(L, -1);
         
-        char new_path[MAXPDSTRING * 3];
+        char new_path[MAXPDSTRING * 4];
         snprintf(new_path, sizeof(new_path), 
-                 "%s/?.lua;%s/lib/?.lua;%s", 
+                 "%s/?.lua;%s/lib/?.lua;./?.lua;./lib/?.lua;%s", 
                  dirpath, dirpath, current_path);
         
         lua_pop(L, 1);  // pop old path

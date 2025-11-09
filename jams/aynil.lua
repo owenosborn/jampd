@@ -6,7 +6,7 @@ require("lib/progression")
 function init(jam)
     print("hi")
     progression = Progression.new()
-    progression:parse("G.A.D.D7.")
+    progression:parse("Fmaj7...F+7...Bbmaj7.Bo7.A-7.Abo7.G-7.C7.A-7b5.D7.G-7.C7.F6...")
     progression:print()
     count = 0
 end
@@ -22,10 +22,6 @@ function tick(jam)
 
     if jam.on(1/6) then 
         note = chord:note(count % #chord.tones + 1, count // #chord.tones)
-        count = count + 1
-        max = 4 * #chord.tones 
-        if count > max then count = 0 end
-        jam.noteout(note + 60, 50, .1)
     end
 
 end
