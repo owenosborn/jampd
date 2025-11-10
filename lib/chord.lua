@@ -98,6 +98,14 @@ local extension = {
             end,
     ["9"] = function(tones, chord) table.insert(tones, 14) end,    -- 9th = 2nd + octave
     ["b9"] = function(tones, chord) table.insert(tones, 13) end,   -- b9 = b2nd + octave
+    ["7b9"] = function(tones, chord) 
+                table.insert(tones, 10)  -- dom7
+                table.insert(tones, 13)  -- b9
+              end,
+    ["7#9"] = function(tones, chord) 
+                table.insert(tones, 10)  -- dom7
+                table.insert(tones, 15)  -- #9
+              end,
     ["11"] = function(tones, chord) table.insert(tones, 17) end,   -- 11th = 4th + octave
     ["#11"] = function(tones, chord) table.insert(tones, 18) end,  -- #11 = #4th + octave
     ["13"] = function(tones, chord) table.insert(tones, 21) end,   -- 13th = 6th + octave
@@ -106,7 +114,7 @@ local extension = {
                 tones[3] = 6 -- flatten the 5th
               end,
     ["sus4"] = function(tones, chord) 
-                tones[2] = 5 -- flatten the 5th
+                tones[2] = 5 -- replace 3rd with 4th
               end,
 
 }
@@ -215,7 +223,6 @@ function Chord:filter(note_in)
     return closest
 end
 
--- Play all chord tones
 function Chord:play(jam, velocity, duration, octave)
     velocity = velocity or 80
     duration = duration or 0.5
