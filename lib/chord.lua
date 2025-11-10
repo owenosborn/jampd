@@ -215,6 +215,17 @@ function Chord:filter(note_in)
     return closest
 end
 
+-- Play all chord tones
+function Chord:play(jam, velocity, duration, octave)
+    velocity = velocity or 80
+    duration = duration or 0.5
+    octave = octave or 5
+    
+    for i = 1, #self.tones do
+        jam.noteout(self:note(i, octave), velocity, duration)
+    end
+end
+
 -- Print chord information
 function Chord:print(print_callback)
     print_callback = print_callback or print
