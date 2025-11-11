@@ -84,6 +84,24 @@ function weighted_choose(weights)
     return #weights
 end
 
+Counter = {}
+Counter.__index = Counter
+function Counter.new(max)
+    local self = setmetatable({}, Counter)
+    self.max = max or 1
+    self.count = 0
+    return self
+end
+
+function Counter:tick()
+    self.count = (self.count + 1) % self.max
+    return self.count
+end
+
+function Counter:reset()
+    self.count = 0
+end
+
 return {
     prob = prob,
     p = p,
@@ -94,5 +112,6 @@ return {
     map = map,
     wrap = wrap,
     choose = choose,
-    weighted_choose = weighted_choose
+    weighted_choose = weighted_choose,
+    Counter = Counter
 }

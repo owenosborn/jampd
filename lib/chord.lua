@@ -223,6 +223,7 @@ function Chord:filter(note_in)
     return closest
 end
 
+-- play basic chord
 function Chord:play(jam, velocity, duration, octave)
     velocity = velocity or 80
     duration = duration or 0.5
@@ -231,6 +232,52 @@ function Chord:play(jam, velocity, duration, octave)
     for i = 1, #self.tones do
         jam.noteout(self:note(i, octave), velocity, duration)
     end
+end
+
+-- Play the voicing
+function Chord:playv(jam, velocity, duration)
+    if not self.voicing or #self.voicing == 0 then
+        error("No voicing set. Call chord:voice() first")
+    end
+    
+    velocity = velocity or 80
+    duration = duration or 0.5
+    
+    for _, note in ipairs(self.voicing) do
+        jam.noteout(note, velocity, duration)
+    end
+end
+
+-- Generate a voicing where each tone is placed closest to center note
+function Chord:voice(center)
+    center = center or 60
+    self.voicing = {}
+    
+    for _, tone in ipairs(self.tones) do
+        -- Start with the pitch class at octave 0
+        local note = (tone + self.root) % 12
+        
+        -- Find the octave that puts this note closest to center
+        local best_note = note
+        local best_distance = math.abs(note - center)
+        
+        -- Check octaves above and below
+        for octave = 0, 10 do
+            local candidate = note + (octave * 12)
+            local distance = math.abs(candidate - center)
+            if distance < best_distance then
+                best_distance = distance
+                best_note = candidate
+            end
+        end
+        
+        table.insert(self.voicing, best_note)
+    end
+    
+    -- Sort voicing from low to high
+    table.sort(self.voicing)
+    
+    return self  -- for chaining
 end
 
 -- Print chord information

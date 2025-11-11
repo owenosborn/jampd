@@ -4,13 +4,18 @@
 Progression = {}
 Progression.__index = Progression
 
-function Progression.new()
+function Progression.new(prog_string)
     local self = setmetatable({}, Progression)
     self.chords = {}            -- array of Chord objects, each chord object gets time attribute added. time is in beats
     self.length_beats = 0       -- total length in beats
     self.playhead = 0           -- current position in ticks
     self.index = 1              -- current chord index
     self.chord_changed = true   -- flag for new chord detection
+    
+    if prog_string then
+        self:parse(prog_string)
+    end
+    
     return self
 end
 
@@ -126,7 +131,7 @@ function Progression:parse(prog_string)
         
         -- Create and add chord
         if chord_name ~= "" then
-            local chord = require("lib/chord").Chord.new():parse(chord_name)
+            local chord = require("lib/chord").Chord.new(chord_name)
             local beats = 1 + dot_count
             self:add(chord, beats)
         end
