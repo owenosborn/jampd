@@ -23,16 +23,16 @@ function tick(jam)
     chord = progression:tick(jam)
     
  
-    if jam.on(1/2) then
+    if jam.every(1/2) then
         c = c + 1
         jam.noteout(chord:note(1, 3 + c % 2), 100, 1/3)
     end
 
-    if jam.on(1/2) and math.random() > .1 then
+    if jam.every(1/2) and math.random() > .1 then
         jam.noteout(chord:filter(math.random(40,90)), 100, .1)
     end 
 
-    if jam.on(1/2, .6/2) and math.random() > .33 then
+    if jam.every(1/2, .6/2) and math.random() > .33 then
         jam.noteout(chord:filter(math.random(40,90)), 100, .1)
     end 
 

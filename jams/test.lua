@@ -18,7 +18,7 @@ function notein(jam, ...)
 end
 
 function tick(jam)
-    if jam.on(1) then
+    if jam.every(1) then
         jam.msgout("onono", 1, 2)
         jam.noteout(60, 0)
         jam.noteout(60, 100)

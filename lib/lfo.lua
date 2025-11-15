@@ -126,7 +126,7 @@ end
 -- Call every tick to send CC messages
 function LFO:tick(jam)
     -- Only send at update_rate intervals to avoid MIDI spam
-    if jam.on(self.update_rate) then
+    if jam.every(self.update_rate) then
         local value = math.floor(self:getScaled(jam) + 0.5)  -- Round to nearest int
         
         -- Only send if value changed

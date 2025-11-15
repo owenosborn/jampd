@@ -22,11 +22,11 @@ function tick(jam)
     
     chord = progression:tick(jam)
    
-    if jam.on(1/1) then
+    if jam.every(1/1) then
         jam.noteout(chord:note(1, 3), 100, 1)
     end
 
-    if jam.on(1/8) and math.random() > 0 then
+    if jam.every(1/8) and math.random() > 0 then
         if sweep ~= sweeplast then
             jam.noteout(sweep, 60, .1)
             sweeplast = sweep

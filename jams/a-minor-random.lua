@@ -30,14 +30,14 @@ end
 
 function tick(jam)
     -- Play bass notes
-    if jam.on(bass_rate) then
+    if jam.every(bass_rate) then
         local note = random_note(bass_octave_range[1], bass_octave_range[2])
         local velocity = math.random(60, 90)  -- quieter, more consistent
         jam.noteout(note, velocity, bass_duration)
     end
     
     -- Play melody notes
-    if jam.on(melody_rate) then
+    if jam.every(melody_rate) then
         local note = random_note(melody_octave_range[1], melody_octave_range[2])
         local velocity = math.random(70, 110)  -- more varied dynamics
         jam.noteout(note - 12, velocity, melody_duration)

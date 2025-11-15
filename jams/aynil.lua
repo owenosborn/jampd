@@ -15,12 +15,12 @@ function tick(jam)
     
     chord = progression:tick(jam)
    
-    if jam.on(1/1) then
+    if jam.every(1/1) then
         jam.noteout(chord:note(1, 3), 100, 1)
         count = 0
     end
 
-    if jam.on(1/6) then 
+    if jam.every(1/6) then 
         note = chord:note(count % #chord.tones + 1, count // #chord.tones)
     end
 

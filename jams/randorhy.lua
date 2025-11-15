@@ -6,7 +6,7 @@ end
 
 function tick(jam)
 
-    if jam.on(1) then 
+    if jam.every(1) then 
         divi = math.random(1, #divs)
     end
 

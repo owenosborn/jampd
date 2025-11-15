@@ -1,48 +1,35 @@
 
+require("lib/chord")
+require("lib/progression")
+ 
 function init(jam)
-    local Progression = require("lib/progression").Progression
-    
+    print("hi")
     progression = Progression.new()
-    --progression:parse("Fmaj7...F+7...Bbmaj7.Bo7.A-7.Abo7.G-7.C7.A-7b5.D7.G-7.C7.F6...")
-    progression:parse("E-9...........F-7............")
-    progression:print()    
-    print("Country jam loaded - F major")
+    progression:parse("G-7.A7.D-9.Db7.")
+    progression:print()
+    chord = progression:chord()
+    c = 0
+    div = 1/4
+end
+
+function ctlin(jam, n, v) 
+    if n == 33 then 
+        sweep = chord:filter(v)
+        jam.noteout(sweep, 60, .1)
+    end
 end
 
 function tick(jam)
-    local chord = progression:tick(jam)
-    -- Alternating bass pattern (classic country style)
-    -- Root on odd beats, fifth on even beats
-    if jam.every(2) then
-        local bass_note = chord:note(1, 4)
-        jam.noteout(bass_note, 90, 0.9)
-    end
-
-    if jam.every(2,1) then
-        local bass_note = chord:note(3, 4)
-        jam.noteout(bass_note - 12, 90, 0.9)
-    end
-
-    -- Chord hits on strong beats
-    if jam.every(2, .99) then  -- every 2 beats
-        jam.noteout(chord:note(1, 5), 70, 0.4)
-        jam.noteout(chord:note(2, 5), 70, 0.4)
-        jam.noteout(chord:note(3, 5), 70, 0.4)
-        jam.noteout(chord:note(4, 5), 70, 0.4)
-    end
     
-    -- Simple melody fills on off-beats
-    --if jam.every(1, 2/3) then  -- swing 8
-    if jam.every(0.5, 1/3) then 
-        if math.random() > 0.3 then  -- sparse, not every time
-            local note = chord:filter(math.random(50,80))
-            --jam.noteout(note, math.random(60, 85), 0.4)
-        end
+    chord = progression:tick(jam)
+ 
+    if jam.every(1/2) then
+        c = c + 1
+        jam.noteout(chord:note(1, 3 + c % 2), 100, .1)
     end
 
-    if jam.every(1/3, .04) and math.random() > .1 then
-        local note = chord:filter(math.random(80,100))
-        jam.noteout(note, math.random(60, 80), 0.5)
-    end
+    if jam.every(div) and math.random() > .33 then
+        if math.random() > .5 then div = 1/8 else div = 1/4 end
+        jam.noteout(chord:filter(math.random(40,90)), 100, .1)
+    end 
 end
-

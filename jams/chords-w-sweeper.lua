@@ -23,12 +23,12 @@ function tick(jam)
     
     chord = progression:tick(jam)
    
-    if jam.on(1/1) then
+    if jam.every(1/1) then
         jam.noteout(chord:note(1, 3), 100, 1)
         count = 0
     end
 
-    if jam.on(1/6) then 
+    if jam.every(1/6) then 
         note = chord:note(count % #chord.tones + 1, count // #chord.tones)
         count = count + 1
         max = 4 * #chord.tones 
@@ -36,7 +36,7 @@ function tick(jam)
         --jam.noteout(note + 60, 50, .1)
     end
 
-    if jam.on(1/8) and math.random() > .2 then
+    if jam.every(1/8) and math.random() > .2 then
         rando = chord:filter(math.random(20,100)) 
         jam.noteout(rando, 60, .1)
     end 

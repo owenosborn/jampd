@@ -10,7 +10,7 @@ end
 
 function tick(jam)
     
-    if jam.on(1/8) then 
+    if jam.every(1/8) then 
         note = chord:note(count % #chord.tones + 1, count // #chord.tones)
         count = count + 1
         max = 8 * #chord.tones 

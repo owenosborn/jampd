@@ -22,7 +22,7 @@ function tick(jam)
     local lfo3 = math.floor((math.sin(2 * math.pi * beats / rate3) + 1) / 2 * 127)
     
     -- Send out CC messages x times per beat to avoid overwhelming MIDI
-    if jam.on(.1) then
+    if jam.every(.1) then
         jam.cltout(21, lfo1)
         jam.cltout(22, lfo2)
         jam.cltout(23, lfo3)

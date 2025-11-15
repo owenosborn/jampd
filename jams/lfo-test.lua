@@ -8,7 +8,7 @@ end
 
 function tick(jam)
 
-    if jam.on(1) then 
+    if jam.every(1) then 
         jam.noteout(60, 100, .1)
     end
 

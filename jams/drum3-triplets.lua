@@ -16,29 +16,29 @@ end
 
 function tick(jam)
     -- Hi-hats on sixteenths with accents
-    if jam.on(1/3) then 
-        --local vel = jam.on(1) and 90 or 50  -- accent on downbeats
+    if jam.every(1/3) then 
+        --local vel = jam.every(1) and 90 or 50  -- accent on downbeats
         local vel = choose({50, 80})
         jam.noteout(70, vel, 1/8)
     end
     
-    if cflag and jam.on(1/8) then
+    if cflag and jam.every(1/8) then
         cflag = false
         jam.noteout(cval, 80, 1/8)
     end
 
     -- Simple backbeat - snare on 2 and 4 with ghost notes 
     -- use elseif so we don't play more than one note the same tick
-    if jam.on(2, 1.05)  then jam.noteout(54, 85, 1/4) 
+    if jam.every(2, 1.05)  then jam.noteout(54, 85, 1/4) 
     
     -- ghost notes
-    elseif jam.on(1/3)  and p(.1)  then jam.noteout(54, 50, 1/4) 
-    elseif jam.on(1/6)  and p(.1)  then jam.noteout(54, 50, 1/4) end
+    elseif jam.every(1/3)  and p(.1)  then jam.noteout(54, 50, 1/4) 
+    elseif jam.every(1/6)  and p(.1)  then jam.noteout(54, 50, 1/4) end
     
     -- Kick on 1 and 3
-    if jam.on(2) then jam.noteout(40, 90, 1/4)
+    if jam.every(2) then jam.noteout(40, 90, 1/4)
     
     -- ghost notes
-    elseif  jam.on(1/3, .04)  and p(.1)  then jam.noteout(40, 50, 1/4) 
-    elseif  jam.on(1/6, .02)  and p(.6)  then jam.noteout(40, 50, 1/4) end
+    elseif  jam.every(1/3, .04)  and p(.1)  then jam.noteout(40, 50, 1/4) 
+    elseif  jam.every(1/6, .02)  and p(.6)  then jam.noteout(40, 50, 1/4) end
 end
