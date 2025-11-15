@@ -138,8 +138,8 @@ static int l_print(lua_State *L) {
     return 0;
 }
 
-// Lua C function to implement jam.on()
-static int l_on(lua_State *L) {
+// Lua C function to implement jam.every()
+static int l_every(lua_State *L) {
     lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
     t_jam *x = (t_jam *)lua_touserdata(L, -1);
     lua_pop(L, 1);
@@ -153,11 +153,25 @@ static int l_on(lua_State *L) {
         return 1;
     }
     
+    // check for next tick on timeline
     double ticks_per_interval = x->tpb * interval;
     long intervals_passed = (long)(tc / ticks_per_interval);
     long interval_start_tick = (long)ceil((ticks_per_interval * intervals_passed));
     lua_pushboolean(L, tc == interval_start_tick);
 
+    return 1;
+}
+
+// Lua C function to implement jam.once()
+static int l_once(lua_State *L) {
+    lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
+    t_jam *x = (t_jam *)lua_touserdata(L, -1);
+    lua_pop(L, 1);
+    
+    double beat = luaL_checknumber(L, 1);
+    long target_tick = (long)(beat * x->tpb);
+    
+    lua_pushboolean(L, x->tc == target_tick);
     return 1;
 }
 
@@ -191,9 +205,12 @@ static void init_jam(t_jam *x) {
     lua_pushcfunction(L, l_msgout);
     lua_setfield(L, -2, "msgout");
 
-    lua_pushcfunction(L, l_on);
-    lua_setfield(L, -2, "on");
+    lua_pushcfunction(L, l_every);
+    lua_setfield(L, -2, "every");
     
+    lua_pushcfunction(L, l_once);
+    lua_setfield(L, -2, "once");
+
     // Store jam as global
     lua_setglobal(L, "jam");
     

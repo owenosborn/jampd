@@ -22,18 +22,25 @@ The `jam` object provides timing information and functions to generate musical o
 
 ### Core Functions
 
-#### `jam.on(interval, offset)`
+#### `jam.every(interval, offset)`
 Returns true when the current tick aligns with a rhythmic interval.
 
 ```lua
-jam.on(1)       -- Every beat
-jam.on(1/4)     -- Every quarter beat (sixteenth notes)
-jam.on(2)       -- Every 2 beats
-jam.on(1, 1/2)  -- Every beat, offset by half a beat
+jam.every(1)       -- Every beat
+jam.every(1/4)     -- Every quarter beat (sixteenth notes)
+jam.every(2)       -- Every 2 beats
+jam.every(1, 1/2)  -- Every beat, offset by half a beat
 ```
 
 - **`interval`** - Number of beats between triggers (default: 1)
 - **`offset`** - Beat offset for rhythmic displacement (default: 0)
+
+#### `jam.once(beat)`
+Returns true exactly once at the specified beat number.
+```lua
+jam.once(4)      -- True only at beat 4
+jam.once(2.5)    -- True only at beat 2.5
+```
 
 #### `jam.noteout(note, velocity, duration)`
 Send a note to Pure Data's left outlet.
@@ -129,7 +136,7 @@ end
 
 Jam provides a **minimal timing and I/O foundation** upon which any musical process can be built:
 
-- **Tick-based timing** - Precise rhythmic control via `jam.on()`
+- **Tick-based timing** - Precise rhythmic control via `jam.every()`
 - **Bidirectional MIDI** - Generate notes via `jam.noteout()`, respond via `notein()`
 - **Lua flexibility** - Full programming language for algorithms, state, randomness
 - **Hot-reloadable** - Edit scripts and reload without restarting Pure Data
