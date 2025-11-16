@@ -1,0 +1,45 @@
+# Detect Lua installation
+LUA_CFLAGS = $(shell pkg-config --cflags lua5.4 2>/dev/null || \
+              pkg-config --cflags lua5.3 2>/dev/null || \
+              pkg-config --cflags lua 2>/dev/null || \
+              echo "-I/usr/include/lua5.4")
+
+# Find static Lua library
+LUA_STATIC = $(shell find /usr/lib /usr/local/lib -name "liblua5.4.a" -o -name "liblua5.3.a" -o -name "liblua.a" 2>/dev/null | head -n 1)
+
+# PD include path (common locations on Linux/Raspberry Pi)
+PD_CFLAGS = $(shell pkg-config --cflags pd 2>/dev/null || \
+             echo "-I/usr/include/pd -I/usr/local/include/pd")
+
+# Compiler flags
+CFLAGS = -fPIC -Wall -O2
+
+jam.pd_linux: jam.c
+	@echo "Building with static Lua linking..."
+	@echo "Using Lua static library: $(LUA_STATIC)"
+	gcc -shared -fPIC -o jam.pd_linux jam.c \
+	    $(CFLAGS) $(LUA_CFLAGS) $(PD_CFLAGS) \
+	    $(LUA_STATIC) -lm -ldl
+
+dynamic: jam.c
+	@echo "Building with dynamic Lua linking..."
+	gcc -shared -fPIC -o jam.pd_linux jam.c \
+	    $(CFLAGS) $(LUA_CFLAGS) $(LUA_LIBS) $(PD_CFLAGS)
+
+clean:
+	rm -f jam.pd_linux
+
+install: jam.pd_linux
+	sudo cp jam.pd_linux /usr/lib/pd/extra/
+
+check-deps:
+	@echo "Lua static library: $(LUA_STATIC)"
+	@echo "Lua CFLAGS: $(LUA_CFLAGS)"
+	@echo "PD CFLAGS: $(PD_CFLAGS)"
+
+check-size:
+	@ls -lh jam.pd_linux
+	@echo "Dependencies:"
+	@ldd jam.pd_linux
+
+.PHONY: clean install dynamic check-deps check-size
