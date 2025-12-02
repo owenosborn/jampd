@@ -143,7 +143,6 @@ end
 -- Print progression information
 function Progression:print(print_callback)
     print_callback = print_callback or print
-    print_callback("Progression:")
     local headerFormat = "%-7s | %-6s | %-20s | %-6s | %-6s | %-9s"
     local separator = string.rep("-", 70)
     print_callback(separator)

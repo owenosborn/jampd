@@ -283,12 +283,11 @@ end
 -- Print chord information
 function Chord:print(print_callback)
     print_callback = print_callback or print
-    print_callback("Chord:")
     local formatStr = "%-20s | %-6s | %-6s | %-9s"
     local headerFormat = "%-20s | %-6s | %-6s | %-9s"
     local separator = string.rep("-", 50)
     print_callback(separator)
-    print_callback(string.format(headerFormat, "tones", "Root", "Bass", "Name"))
+    print_callback(string.format(headerFormat, "Tones", "Root", "Bass", "Name"))
     print_callback(separator)
     local tones_str = table.concat(self.tones, ", ")
     local info = string.format(
