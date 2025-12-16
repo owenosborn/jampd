@@ -162,6 +162,14 @@ function Presets:getCurrentName()
     return self.preset_list[self.current_index]:gsub("-settings%.lua$", "")
 end
 
+-- Get current preset display string in "1/5" format
+function Presets:getDisplayString()
+    if self.current_index == 0 or #self.preset_list == 0 then
+        return "None"
+    end
+    return string.format("%d/%d", self.current_index, #self.preset_list)
+end
+
 return {
     Presets = Presets
 }

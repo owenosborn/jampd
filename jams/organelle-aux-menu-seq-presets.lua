@@ -85,6 +85,15 @@ function displayModal(jam, text)
     oled.flip(jam)
 end
 
+-- Display two-line modal dialog with box and large font
+function displayModalTwoLines(jam, line1, line2)
+    oled.fillArea(jam, 10, 13, 108, 48, oled.COLOR_BLACK)  -- height: 38→48 (+10px)
+    oled.box(jam, 10, 13, 108, 48, oled.COLOR_WHITE)       -- height: 38→48 (+10px)
+    oled.println(jam, 20, 19, oled.SIZE_16, oled.COLOR_WHITE, line1)  -- y: 20→19
+    oled.println(jam, 20, 40, oled.SIZE_16, oled.COLOR_WHITE, line2)  -- y: 36→40 (+4px for total +5px gap)
+    oled.flip(jam)
+end
+
 -- Input handlers
 function notein(jam, n, v)
     -- Track note on/off for aux mode blocking
@@ -196,7 +205,7 @@ function auxFunction3(jam)
     local settings = presets:prev()
     if settings then
         applyPreset(jam, settings)
-        displayModal(jam, "Preset: " .. presets:getCurrentName())
+        displayModalTwoLines(jam, "Preset", presets:getDisplayString())
     end
 end
 
@@ -222,7 +231,7 @@ function auxFunction4(jam)
     end
     
     if presets:save(settings) then
-        displayModal(jam, "Saved: " .. presets:getCurrentName())
+        displayModalTwoLines(jam, "Saved", presets:getDisplayString())
     end
 end
 
@@ -231,7 +240,7 @@ function auxFunction5(jam)
     local settings = presets:next()
     if settings then
         applyPreset(jam, settings)
-        displayModal(jam, "Preset: " .. presets:getCurrentName())
+        displayModalTwoLines(jam, "Preset", presets:getDisplayString())
     end
 end
 
@@ -262,8 +271,6 @@ function applyPreset(jam, settings)
         jam.msgout("oled", "/led", 3)  -- Set LED to playing state
     end
 
-    -- Update display
-    displayKnobs()
 end
 
 -- Transpose down by octave
