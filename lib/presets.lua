@@ -167,7 +167,39 @@ function Presets:getDisplayString()
     if self.current_index == 0 or #self.preset_list == 0 then
         return "None"
     end
-    return string.format("%d/%d", self.current_index, #self.preset_list)
+    return string.format("%d / %d", self.current_index, #self.preset_list)
+end
+
+-- Delete current preset
+function Presets:delete()
+    if self.current_index == 0 or #self.preset_list == 0 then
+        print("No preset to delete")
+        return false
+    end
+    
+    local filename = self.preset_list[self.current_index]
+    local filepath = self.base_path .. "/" .. filename
+    
+    -- Delete the file
+    local success = os.remove(filepath)
+    if not success then
+        print("Failed to delete preset file")
+        return false
+    end
+    
+    -- Remove from list
+    table.remove(self.preset_list, self.current_index)
+    
+    -- Adjust current_index
+    if #self.preset_list == 0 then
+        self.current_index = 0
+    elseif self.current_index > #self.preset_list then
+        self.current_index = #self.preset_list
+    end
+    -- else keep current_index the same (now points to next preset)
+    
+    print("Deleted preset: " .. filename)
+    return true
 end
 
 return {

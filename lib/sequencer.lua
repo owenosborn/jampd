@@ -21,12 +21,9 @@ end
 
 -- State transitions
 function Sequencer:arm()
-    if self.state == "STOPPED" then
-        self.state = "ARMED"
-        self.events = {}
-        return true
-    end
-    return false
+    self:clear()
+    self.state = "ARMED"
+    return true
 end
 
 function Sequencer:startRecording(jam)
