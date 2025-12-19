@@ -1,17 +1,18 @@
 -- Main Organelle script with sequencer
-local oled = require("lib/oled")
+local OGUI = require("lib/ogui").OGUI
 local Sequencer = require("lib/sequencer").Sequencer
 local Presets = require("lib/presets").Presets
 local Latch = require("lib/latch").Latch
 
 -- State
 local seq = nil
+local ogui = nil
 local aux_pressed = false
 local knob_values = {0, 0, 0, 0}
 local transpose = 0
 local notes_held = 0
 local presets = nil
-local delete_armed = false  -- Two-tap delete confirmation
+local delete_armed = false
 
 -- Aux function keys (black keys starting from C#)
 local aux_keys = {61, 63, 66, 68, 70, 73, 75, 78, 80, 82}
@@ -31,17 +32,37 @@ local knob_configs = {
 }
 
 function init(jam)
-    seq = Sequencer.new(1000)
+    -- Create Organelle UI with msgout callback
+    ogui = OGUI.new(function(...)
+        jam.msgout(...)
+    end)
+    
+    seq = Sequencer.new({
+        tpb = jam.tpb,
+        max_events = 1000,
+        output = function(type, ...)
+            if type == "note" then
+                local note, velocity = ...
+                jam.noteout(note, velocity)
+            elseif type:match("^knob%d$") then
+                local knob_type, value = ...
+                jam.msgout("knobs", knob_type, value)
+            end
+        end
+    })
+    
     presets = Presets.new("presets")
+    
     latch = Latch.new(function(note, velocity)
         latchOut(jam, note, velocity)
     end)
+    
     displayKnobs()
-    jam.msgout("oled", "/led", 0)
+    ogui:led(OGUI.LED_OFF)
 end
 
 function tick(jam)
-    seq:tick(jam)
+    seq:tick()
 end
 
 -- Display all knob values on OLED
@@ -49,7 +70,7 @@ function displayKnobs()
     for i = 1, 4 do
         local cfg = knob_configs[i]
         local display_val = cfg[2](knob_values[i])
-        oled.setLine(jam, i, string.format("%d: %s: " .. cfg[1], i, cfg[3], display_val))
+        ogui:setLine(i, string.format("%d: %s: " .. cfg[1], i, cfg[3], display_val))
     end
 end
 
@@ -57,87 +78,86 @@ end
 function displayAuxMenu()
     for line = 1, 5 do
         local left_label = aux_labels[line]
-        -- Override for function 1 based on sequencer state
         if line == 1 then
             left_label = seq:isPlaying() and "Stop" or "Play"
         end
-        oled.setLine(jam, line, string.format("%-8s | %-8s", left_label, aux_labels[line + 5]))
+        ogui:setLine(line, string.format("%-8s | %-8s", left_label, aux_labels[line + 5]))
     end
 end
 
 -- Display modal dialog with box and large font
-function displayModal(jam, text)
-    oled.fillArea(jam, 10, 13, 108, 38, oled.COLOR_BLACK)
-    oled.box(jam, 10, 13, 108, 38, oled.COLOR_WHITE)
-    oled.println(jam, 20, 25, oled.SIZE_16, oled.COLOR_WHITE, text)
-    oled.flip(jam)
+function displayModal(text)
+    ogui:fillArea(10, 13, 108, 38, OGUI.COLOR_BLACK)
+    ogui:box(10, 13, 108, 38, OGUI.COLOR_WHITE)
+    ogui:println(20, 25, OGUI.SIZE_16, OGUI.COLOR_WHITE, text)
+    ogui:flip()
 end
 
 -- Display two-line modal dialog with box and large font
-function displayModalTwoLines(jam, line1, line2)
-    oled.fillArea(jam, 10, 13, 108, 48, oled.COLOR_BLACK)
-    oled.box(jam, 10, 13, 108, 48, oled.COLOR_WHITE)
-    oled.println(jam, 20, 19, oled.SIZE_16, oled.COLOR_WHITE, line1)
-    oled.println(jam, 20, 40, oled.SIZE_16, oled.COLOR_WHITE, line2)
-    oled.flip(jam)
+function displayModalTwoLines(line1, line2)
+    ogui:fillArea(10, 13, 108, 48, OGUI.COLOR_BLACK)
+    ogui:box(10, 13, 108, 48, OGUI.COLOR_WHITE)
+    ogui:println(20, 19, OGUI.SIZE_16, OGUI.COLOR_WHITE, line1)
+    ogui:println(20, 40, OGUI.SIZE_16, OGUI.COLOR_WHITE, line2)
+    ogui:flip()
 end
 
 -- Aux Functions Table
 local auxFunctions = {
     -- Function 1: Start/Stop playback
-    function(jam)
+    function()
         if seq:isPlaying() then
-            seq:stop(jam)
-            jam.msgout("oled", "/led", 0)
-            displayModal(jam, "Stopped")
+            seq:stop()
+            ogui:led(OGUI.LED_OFF)
+            displayModal("Stopped")
         elseif seq:isStopped() then 
             if seq:hasEvents() then
                 seq:play()
-                jam.msgout("oled", "/led", 3)
-                displayModal(jam, "Playing")
+                ogui:led(OGUI.LED_GREEN)
+                displayModal("Playing")
             else
-                displayModal(jam, "Empty")        
+                displayModal("Empty")        
             end
         elseif seq:isArmed() then
-            seq:stop(jam)
-            jam.msgout("oled", "/led", 0)
-            displayModal(jam, "Stopped")
+            seq:stop()
+            ogui:led(OGUI.LED_OFF)
+            displayModal("Stopped")
         end
     end,
     
     -- Function 2: Arm recording
-    function(jam)
+    function()
         if seq:isStopped() or seq:isPlaying() then
-            seq:stop(jam)
+            seq:stop()
             seq:arm()
-            jam.msgout("oled", "/led", 6)
-            displayModal(jam, "Armed")
+            ogui:led(OGUI.LED_PURPLE)
+            displayModal("Armed")
         elseif seq:isArmed() then
-            seq:stop(jam)
-            jam.msgout("oled", "/led", 0)
-            displayModal(jam, "Stopped")
+            seq:stop()
+            ogui:led(OGUI.LED_OFF)
+            displayModal("Stopped")
         end
     end,
     
     -- Function 3: Previous preset
-    function(jam)
+    function()
         local settings = presets:prev()
         if settings then
-            applyPreset(jam, settings)
+            applyPreset(settings)
             if seq:hasEvents() then
                 seq:play()
-                jam.msgout("oled", "/led", 3)
+                ogui:led(OGUI.LED_GREEN)
             end
-            displayModalTwoLines(jam, "Preset", presets:getDisplayString())
+            displayModalTwoLines("Preset", presets:getDisplayString())
         else 
-            displayModal(jam, "No preset")
+            displayModal("No preset")
         end
     end,
     
     -- Function 4: Save preset
-    function(jam)
+    function()
         if seq:isRecording() then
-            displayModal(jam, "Stop recording first")
+            displayModal("Stop recording first")
             return
         end
         
@@ -150,64 +170,67 @@ local auxFunctions = {
         }
         
         if presets:save(settings) then
-            displayModalTwoLines(jam, "Save", presets:getDisplayString())
+            displayModalTwoLines("Save", presets:getDisplayString())
         end
     end,
     
     -- Function 5: Next preset
-    function(jam)
+    function()
         local settings = presets:next()
         if settings then
-            applyPreset(jam, settings)
+            applyPreset(settings)
             if seq:hasEvents() then
                 seq:play()
-                jam.msgout("oled", "/led", 3)
+                ogui:led(OGUI.LED_GREEN)
             end
-            displayModalTwoLines(jam, "Preset", presets:getDisplayString())
+            displayModalTwoLines("Preset", presets:getDisplayString())
         else 
-            displayModal(jam, "No preset")
+            displayModal("No preset")
         end
     end,
     
     -- Function 6: Transpose down by octave
-    function(jam)
+    function()
         transpose = math.max(-24, transpose - 12)
-        displayModalTwoLines(jam, "Octave", string.format("%+d", transpose / 12))
+        displayModalTwoLines("Octave", string.format("%+d", transpose / 12))
     end,
     
     -- Function 7: Transpose up by octave
-    function(jam)
+    function()
         transpose = math.min(24, transpose + 12)
-        displayModalTwoLines(jam, "Octave", string.format("%+d", transpose / 12))
+        displayModalTwoLines("Octave", string.format("%+d", transpose / 12))
     end,
     
-    -- Functions 8-9: Placeholders
-    function(jam) 
+    -- Function 8: Latch toggle
+    function() 
         latch:toggle()
-        if latch.enabled then displayModalTwoLines(jam, "Latch", "On")      
-        else displayModalTwoLines(jam, "Latch", "Off")  end
+        if latch.enabled then 
+            displayModalTwoLines("Latch", "On")      
+        else 
+            displayModalTwoLines("Latch", "Off")  
+        end
     end,
-    function(jam) end,
+    
+    -- Function 9: Placeholder
+    function() end,
     
     -- Function 10: Delete preset (requires two taps)
-    function(jam)
+    function()
         if presets.current_index == 0 or presets:count() == 0 then
-            displayModal(jam, "No preset")
+            displayModal("No preset")
             return
         end
         
         if not delete_armed then
-            -- First tap: show confirmation
             delete_armed = true
-            displayModalTwoLines(jam, "Delete ", presets:getDisplayString() .. "?")
+            displayModalTwoLines("Delete ", presets:getDisplayString() .. "?")
         else
-            -- Second tap: actually delete, and load new 
             if presets:delete() then
                 delete_armed = false
-                displayModalTwoLines(jam, "Deleted", " ")
+                displayModalTwoLines("Deleted", " ")
                 local settings = presets:load(presets.current_index)
                 if settings then
-                    applyPreset(jam, settings)
+                    applyPreset(settings)
                 end
             end
         end
@@ -215,20 +238,17 @@ local auxFunctions = {
 }
 
 -- Helper to apply loaded preset
-function applyPreset(jam, settings)
-    -- Stop sequencer first to prevent stuck notes
+function applyPreset(settings)
     if seq:isPlaying() then
-        seq:stop(jam)
-        jam.msgout("oled", "/led", 0)
+        seq:stop()
+        ogui:led(OGUI.LED_OFF)
     end
     
-    -- Apply knob values
     for i = 1, 4 do
         knob_values[i] = settings["knob" .. i] or 0
         jam.msgout("knobs", "knob" .. i, knob_values[i])
     end
     
-    -- Load sequence if present
     if settings.sequence then 
         seq:deserialize(settings.sequence)
     end
@@ -236,67 +256,57 @@ end
 
 -- Input handlers
 function notein(jam, n, v)
-    -- Track note on/off for aux mode blocking
     notes_held = notes_held + (v > 0 and 1 or -1)
     notes_held = math.max(0, notes_held)
     
     local transposed_note = n + transpose
     
     if aux_pressed then
-        -- Aux mode: check for aux function triggers
         if v > 0 then
             for i, key in ipairs(aux_keys) do
                 if n == key then
-                    -- Reset delete confirmation unless we're on function 10
                     if i ~= 10 then
                         delete_armed = false
                     end
-                    auxFunctions[i](jam)
+                    auxFunctions[i]()
                     return
                 end
             end
         end
     else
-        -- Normal mode: record and pass through
         if seq:isArmed() and v > 0 then
-            seq:startRecording(jam)
-            jam.msgout("oled", "/led", 1)
+            seq:startRecording()
+            ogui:led(OGUI.LED_RED)
         end
         latch:notein(transposed_note, v)
-       -- seq:recordNote(jam, transposed_note, v)
-       -- jam.noteout(transposed_note, v)
     end
 end
 
 function latchOut(jam, n, v)
-    print("latch out")
-    seq:recordNote(jam, n, v)
+    seq:recordNote(n, v)
     jam.noteout(n, v)
 end
 
--- Aux button handler (1 = pressed, 0 = released)
+-- Aux button handler
 function aux(jam, v)
     if v == 1 then
-        -- Special case: if recording, end it
         if seq:isRecording() then
-            seq:endRecording(jam)
+            seq:endRecording()
             seq:play()
-            jam.msgout("oled", "/led", 3)
+            ogui:led(OGUI.LED_GREEN)
             return
         end
         
-        -- Only enter aux mode if no notes are held
         if notes_held == 0 then
             aux_pressed = true
-            oled.clear(jam)
+            ogui:clear()
             displayAuxMenu()
         end
     else
-        -- Aux released
         if aux_pressed then
             aux_pressed = false
-            delete_armed = false  -- Reset delete confirmation
-            oled.clear(jam)
+            delete_armed = false
+            ogui:clear()
             displayKnobs()
         end
     end
@@ -309,16 +319,16 @@ local function handleKnob(jam, knob_num, v)
     if not aux_pressed then
         local cfg = knob_configs[knob_num]
         local display_val = cfg[2](v)
-        oled.setLine(jam, knob_num, string.format("%d: %s: " .. cfg[1], knob_num, cfg[3], display_val))
+        ogui:setLine(knob_num, string.format("%d: %s: " .. cfg[1], knob_num, cfg[3], display_val))
     end
     
     jam.msgout("knobs", "knob" .. knob_num, v)
     
     if seq:isArmed() then
-        seq:startRecording(jam)
-        jam.msgout("oled", "/led", 1)
+        seq:startRecording()
+        ogui:led(OGUI.LED_RED)
     end
-    seq:recordKnob(jam, knob_num, v)
+    seq:recordKnob(knob_num, v)
 end
 
 -- Knob handlers

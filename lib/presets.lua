@@ -167,7 +167,7 @@ function Presets:getDisplayString()
     if self.current_index == 0 or #self.preset_list == 0 then
         return "None"
     end
-    return string.format("%d / %d", self.current_index, #self.preset_list)
+    return string.format("%d of %d", self.current_index, #self.preset_list)
 end
 
 -- Delete current preset

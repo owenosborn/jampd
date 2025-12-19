@@ -2,8 +2,13 @@
 local Sequencer = {}
 Sequencer.__index = Sequencer
 
-function Sequencer.new(max_events)
+function Sequencer.new(config)
     local self = setmetatable({}, Sequencer)
+    
+    config = config or {}
+    self.tpb = config.tpb or 180
+    self.max_events = config.max_events or 1000
+    self.output = config.output or function() end
     
     self.state = "STOPPED"
     self.events = {}
@@ -13,11 +18,10 @@ function Sequencer.new(max_events)
     self.event_index = 1
     self.recording_held_notes = {}
     self.playback_held_notes = {}
-    self.max_events = max_events or 5000  -- Default limit
+    self.internal_tick = 0  -- Our own counter
     
     return self
 end
-
 
 -- State transitions
 function Sequencer:arm()
@@ -26,18 +30,18 @@ function Sequencer:arm()
     return true
 end
 
-function Sequencer:startRecording(jam)
+function Sequencer:startRecording()
     print("Recording started")
     self.state = "RECORDING"
-    self.recording_start_tick = jam.tc
+    self.recording_start_tick = self.internal_tick
     self.events = {}
     self.recording_held_notes = {}
 end
 
-function Sequencer:endRecording(jam)
+function Sequencer:endRecording()
     if self.state ~= "RECORDING" then return end
     
-    local current_beat = (jam.tc - self.recording_start_tick) / jam.tpb
+    local current_beat = (self.internal_tick - self.recording_start_tick) / self.tpb
     
     -- Add note-offs for held notes
     for note, _ in pairs(self.recording_held_notes) do
@@ -64,27 +68,25 @@ function Sequencer:play()
     return true
 end
 
-function Sequencer:stop(jam)
+function Sequencer:stop()
     -- Send note-offs for any held notes
     for note, _ in pairs(self.playback_held_notes) do
-        jam.noteout(note, 0)
+        self.output("note", note, 0)
     end
     self.playback_held_notes = {}
     self.state = "STOPPED"
 end
 
-function Sequencer:toggle(jam)
+function Sequencer:toggle()
     if self.state == "PLAYING" then
-        self:stop(jam)
+        self:stop()
     elseif self.state == "STOPPED" and #self.events > 0 then
         self:play()
     end
 end
 
--- Recording
 -- Core event recording with max check
-function Sequencer:recordEvent(jam, event)
-    
+function Sequencer:recordEvent(event)
     if self.state == "RECORDING" then
         -- Check limit before recording
         if #self.events >= self.max_events then
@@ -93,7 +95,7 @@ function Sequencer:recordEvent(jam, event)
         end
         
         -- Add timestamp
-        event.time = (jam.tc - self.recording_start_tick) / jam.tpb
+        event.time = (self.internal_tick - self.recording_start_tick) / self.tpb
         table.insert(self.events, event)
         return true
     end
@@ -101,9 +103,9 @@ function Sequencer:recordEvent(jam, event)
     return false
 end
 
--- Record note (uses recordEvent)
-function Sequencer:recordNote(jam, note, velocity)
-    local recorded = self:recordEvent(jam, {
+-- Record note
+function Sequencer:recordNote(note, velocity)
+    local recorded = self:recordEvent({
         type = "note",
         note = note,
         velocity = velocity
@@ -118,19 +120,22 @@ function Sequencer:recordNote(jam, note, velocity)
     end
 end
 
--- Record knob (uses recordEvent)
-function Sequencer:recordKnob(jam, knob_num, value)
-    self:recordEvent(jam, {
+-- Record knob
+function Sequencer:recordKnob(knob_num, value)
+    self:recordEvent({
         type = "knob" .. knob_num,
         value = value
     })
 end
 
 -- Playback (call every tick)
-function Sequencer:tick(jam)
+function Sequencer:tick()
+    -- Always increment internal tick
+    self.internal_tick = self.internal_tick + 1
+    
     if self.state ~= "PLAYING" then return end
     
-    local current_beat = self.playback_tick / jam.tpb
+    local current_beat = self.playback_tick / self.tpb
     
     -- Play events at current beat
     while self.event_index <= #self.events do
@@ -138,7 +143,7 @@ function Sequencer:tick(jam)
         
         if event.time <= current_beat then
             if event.type == "note" then
-                jam.noteout(event.note, event.velocity)
+                self.output("note", event.note, event.velocity)
                 
                 if event.velocity > 0 then
                     self.playback_held_notes[event.note] = true
@@ -146,8 +151,7 @@ function Sequencer:tick(jam)
                     self.playback_held_notes[event.note] = nil
                 end
             elseif event.type:match("^knob%d$") then
-                -- Send knob event through msgout
-                jam.msgout("knobs", event.type, event.value)
+                self.output(event.type, event.type, event.value)
             end
             self.event_index = self.event_index + 1
         else
@@ -194,20 +198,10 @@ function Sequencer:clear()
     self.loop_length = 0
 end
 
--- Add this to lib/sequencer.lua
-
--- Convert MIDI note number to note name
-local function midi_to_note_name(midi_num)
-    local notes = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"}
-    local pc = midi_num % 12
-    local octave = math.floor(midi_num / 12) - 1
-    return notes[pc + 1] .. octave
-end
-
 -- Serialize sequence to saveable table
 function Sequencer:serialize()
     if #self.events == 0 then
-        return nil  -- Don't save empty sequence
+        return nil
     end
     
     return {
@@ -267,7 +261,6 @@ function Sequencer:print(print_callback)
     print_callback(separator)
     
     for idx, event in ipairs(self.events) do
-        -- Collect all data fields (everything except time and type)
         local data_parts = {}
         for k, v in pairs(event) do
             if k ~= "time" and k ~= "type" then
@@ -290,7 +283,7 @@ function Sequencer:print(print_callback)
     print_callback(separator)
     
     if self.state == "PLAYING" then
-        local current_beat = self.playback_tick / 180
+        local current_beat = self.playback_tick / self.tpb
         print_callback(string.format("Playback Position: %.2f beats (Event Index: %d)", 
             current_beat, self.event_index))
         print_callback(separator)
