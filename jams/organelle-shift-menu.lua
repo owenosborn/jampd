@@ -2,6 +2,7 @@
 local oled = require("lib/oled")
 local Sequencer = require("lib/sequencer").Sequencer
 local Presets = require("lib/presets").Presets
+local Latch = require("lib/latch").Latch
 
 -- State
 local seq = nil
@@ -17,8 +18,8 @@ local aux_keys = {61, 63, 66, 68, 70, 73, 75, 78, 80, 82}
 
 -- Aux function labels
 local aux_labels = {
-    "Play", "Record", "<", "Save", ">",
-    "Oct-", "Oct+", ".", ".", "Delete"
+    "Play", "Arm", "<", "Save", ">",
+    "Oct-", "Oct+", "Latch", ".", "Delete"
 }
 
 -- Knob display configs: {format_string, value_transform_function, label}
@@ -32,6 +33,9 @@ local knob_configs = {
 function init(jam)
     seq = Sequencer.new(1000)
     presets = Presets.new("presets")
+    latch = Latch.new(function(note, velocity)
+        latchOut(jam, note, velocity)
+    end)
     displayKnobs()
     jam.msgout("oled", "/led", 0)
 end
@@ -125,6 +129,8 @@ local auxFunctions = {
                 jam.msgout("oled", "/led", 3)
             end
             displayModalTwoLines(jam, "Preset", presets:getDisplayString())
+        else 
+            displayModal(jam, "No preset")
         end
     end,
     
@@ -158,6 +164,8 @@ local auxFunctions = {
                 jam.msgout("oled", "/led", 3)
             end
             displayModalTwoLines(jam, "Preset", presets:getDisplayString())
+        else 
+            displayModal(jam, "No preset")
         end
     end,
     
@@ -174,13 +182,17 @@ local auxFunctions = {
     end,
     
     -- Functions 8-9: Placeholders
-    function(jam) end,
+    function(jam) 
+        latch:toggle()
+        if latch.enabled then displayModalTwoLines(jam, "Latch", "On")      
+        else displayModalTwoLines(jam, "Latch", "Off")  end
+    end,
     function(jam) end,
     
     -- Function 10: Delete preset (requires two taps)
     function(jam)
         if presets.current_index == 0 or presets:count() == 0 then
-            displayModal(jam, "No preset loaded")
+            displayModal(jam, "No preset")
             return
         end
         
@@ -250,9 +262,16 @@ function notein(jam, n, v)
             seq:startRecording(jam)
             jam.msgout("oled", "/led", 1)
         end
-        seq:recordNote(jam, transposed_note, v)
-        jam.noteout(transposed_note, v)
+        latch:notein(transposed_note, v)
+       -- seq:recordNote(jam, transposed_note, v)
+       -- jam.noteout(transposed_note, v)
     end
+end
+
+function latchOut(jam, n, v)
+    print("latch out")
+    seq:recordNote(jam, n, v)
+    jam.noteout(n, v)
 end
 
 -- Aux button handler (1 = pressed, 0 = released)
