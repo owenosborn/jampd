@@ -89,135 +89,6 @@ function tick(jam)
     end
 end
 
--- Input handlers
-function notein(jam, n, v)
-    
-    -- keep track of notes pressed, accessing shift menu is not allowed while notes are pressed
-    notes_held = notes_held + (v > 0 and 1 or -1)
-    notes_held = math.max(0, notes_held)
-    
-    local transposed_note = n + transpose
-    
-    -- route shift keys
-    if aux_pressed then
-        if v > 0 then
-            for i, key in ipairs(aux_keys) do
-                if n == key then
-                    if i ~= 10 then
-                        delete_armed = false
-                    end
-                    auxFunctions[i]()
-                    return
-                end
-            end
-            for i, key in ipairs(pattern_select_keys) do
-                if n == key then
-                    loadPattern(i)
-                    return
-                end
-            end
-        end
-    -- otherwise it is a regular note, start sequener if armed and route to latch 
-    else
-        if seq:isArmed() and v > 0 then
-            seq:startRecording()
-            ogui:led(OGUI.LED_RED)
-        end
-        latch:notein(transposed_note, v)
-    end
-end
-
--- Aux button handler
-function aux(jam, v)
-    if v == 1 then
-        if seq:isRecording() then
-            seq:endRecording()
-            seq:play()
-            ogui:led(OGUI.LED_GREEN)
-            return
-        end
-        
-        -- only enter shift menu if no notes are being pressed
-        if notes_held == 0 then
-            aux_pressed = true
-            ogui:clear()
-            displayAuxMenu()
-        end
-    else
-        if aux_pressed then
-            aux_pressed = false
-            delete_armed = false
-            ogui:clear()
-            displayKnobs()
-        end
-    end
-end
-
--- Generic knob handler
-local function handleKnob(jam, knob_num, v)
-    knob_values[knob_num] = v
-    
-    if not aux_pressed then
-        local cfg = knob_configs[knob_num]
-        local display_val = cfg[2](v)
-        ogui:setLine(knob_num, string.format("%d: %s: " .. cfg[1], knob_num, cfg[3], display_val))
-    end
-    
-    jam.msgout("knobs", "knob" .. knob_num, v)
-    
-    if seq:isArmed() then
-        seq:startRecording()
-        ogui:led(OGUI.LED_RED)
-    end
-    seq:recordKnob(knob_num, v)
-end
-
--- Knob handlers
-function knob1(jam, v) handleKnob(jam, 1, v) end
-function knob2(jam, v) handleKnob(jam, 2, v) end
-function knob3(jam, v) handleKnob(jam, 3, v) end
-function knob4(jam, v) handleKnob(jam, 4, v) end
-
--- Scan patterns folder for jam files
-function scanPatterns()
-    pattern_files = {}
-    local handle = io.popen("ls -1 patterns/*.lua 2>/dev/null | sort")
-    if handle then
-        for line in handle:lines() do
-            table.insert(pattern_files, line)
-        end
-        handle:close()
-    end
-    print("Found " .. #pattern_files .. " patterns")
-end
-
--- load subjam pattern, route output to sequencer and output
-function loadPattern(i)
-    if i < 1 or i > #pattern_files then
-        print("Pattern " .. i .. " out of range")
-        displayModal("No pattern")
-        return
-    end
-    
-    local filepath = pattern_files[i]
-    print("Loading pattern: " .. filepath)
-    
-    -- Load pattern as SubJam with output routed to sequencer
-    pattern_subjam = SubJam.load(filepath, jam, function(type, ...)
-        if type == "note" then
-            local note, velocity, duration = ...
-            -- Send to sequencer for recording
-            seq:recordNote(note, velocity, duration)
-            -- And send to actual output
-            jam.noteout(note, velocity, duration)
-        end
-    end)
-    
-    -- Extract just the filename for display
-    local filename = filepath:match("([^/]+)%.lua$") or tostring(i)
-    displayModalTwoLines("Pattern", filename)
-end
-
 -- Aux Functions Table
 local auxFunctions = {
     -- Function 1: Start/Stop playback
@@ -352,6 +223,136 @@ local auxFunctions = {
         end
     end
 }
+
+-- Input handlers
+function notein(jam, n, v)
+    
+    -- keep track of notes pressed, accessing shift menu is not allowed while notes are pressed
+    notes_held = notes_held + (v > 0 and 1 or -1)
+    notes_held = math.max(0, notes_held)
+    
+    local transposed_note = n + transpose
+    
+    -- route shift keys
+    if aux_pressed then
+        if v > 0 then
+            for i, key in ipairs(aux_keys) do
+                if n == key then
+                    if i ~= 10 then
+                        delete_armed = false
+                    end
+                    auxFunctions[i]()
+                    return
+                end
+            end
+            for i, key in ipairs(pattern_select_keys) do
+                if n == key then
+                    loadPattern(i)
+                    return
+                end
+            end
+        end
+    -- otherwise it is a regular note, start sequener if armed and route to latch 
+    else
+        if seq:isArmed() and v > 0 then
+            seq:startRecording()
+            ogui:led(OGUI.LED_RED)
+        end
+        latch:notein(transposed_note, v)
+    end
+end
+
+-- Aux button handler
+function aux(jam, v)
+    if v == 1 then
+        if seq:isRecording() then
+            seq:endRecording()
+            seq:play()
+            ogui:led(OGUI.LED_GREEN)
+            return
+        end
+        
+        -- only enter shift menu if no notes are being pressed
+        if notes_held == 0 then
+            aux_pressed = true
+            ogui:clear()
+            displayAuxMenu()
+        end
+    else
+        if aux_pressed then
+            aux_pressed = false
+            delete_armed = false
+            ogui:clear()
+            displayKnobs()
+        end
+    end
+end
+
+-- Generic knob handler
+local function handleKnob(jam, knob_num, v)
+    knob_values[knob_num] = v
+    
+    if not aux_pressed then
+        local cfg = knob_configs[knob_num]
+        local display_val = cfg[2](v)
+        ogui:setLine(knob_num, string.format("%d: %s: " .. cfg[1], knob_num, cfg[3], display_val))
+    end
+    
+    jam.msgout("knobs", "knob" .. knob_num, v)
+    
+    if seq:isArmed() then
+        seq:startRecording()
+        ogui:led(OGUI.LED_RED)
+    end
+    seq:recordKnob(knob_num, v)
+end
+
+-- Knob handlers
+function knob1(jam, v) handleKnob(jam, 1, v) end
+function knob2(jam, v) handleKnob(jam, 2, v) end
+function knob3(jam, v) handleKnob(jam, 3, v) end
+function knob4(jam, v) handleKnob(jam, 4, v) end
+
+-- Scan patterns folder for jam files
+function scanPatterns()
+    pattern_files = {}
+    local handle = io.popen("ls -1 patterns/*.lua 2>/dev/null | sort")
+    if handle then
+        for line in handle:lines() do
+            table.insert(pattern_files, line)
+        end
+        handle:close()
+    end
+    print("Found " .. #pattern_files .. " patterns")
+end
+
+-- load subjam pattern, route output to sequencer and output
+function loadPattern(i)
+    if i < 1 or i > #pattern_files then
+        print("Pattern " .. i .. " out of range")
+        displayModal("No pattern")
+        return
+    end
+    
+    local filepath = pattern_files[i]
+    print("Loading pattern: " .. filepath)
+    
+    -- Load pattern as SubJam with output routed to sequencer
+    pattern_subjam = SubJam.load(filepath, jam, function(type, ...)
+        if type == "note" then
+            local note, velocity, duration = ...
+            -- Send to sequencer for recording
+            seq:recordNote(note, velocity, duration)
+            -- And send to actual output
+            jam.noteout(note, velocity, duration)
+        end
+    end)
+    
+    -- Extract just the filename for display
+    local filename = filepath:match("([^/]+)%.lua$") or tostring(i)
+    displayModalTwoLines("Pattern", filename)
+end
+
 
 -- Helper to apply loaded preset
 function applyPreset(settings)
