@@ -104,11 +104,12 @@ function Sequencer:recordEvent(event)
 end
 
 -- Record note
-function Sequencer:recordNote(note, velocity)
+function Sequencer:recordNote(note, velocity, duration)
     local recorded = self:recordEvent({
         type = "note",
         note = note,
-        velocity = velocity
+        velocity = velocity,
+        duration = duration
     })
     
     if recorded and self.state == "RECORDING" then
@@ -143,7 +144,7 @@ function Sequencer:tick()
         
         if event.time <= current_beat then
             if event.type == "note" then
-                self.output("note", event.note, event.velocity)
+                self.output("note", event.note, event.velocity, event.duration)
                 
                 if event.velocity > 0 then
                     self.playback_held_notes[event.note] = true

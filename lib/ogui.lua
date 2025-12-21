@@ -40,7 +40,7 @@ end
 
 -- Set LED color (0-7)
 function OGUI:led(color)
-    self.msgout("oled", "/led", color)
+    self.msgout("osc", "/led", color)
 end
 
 ------------------------------------------------------------------------------
@@ -50,67 +50,67 @@ end
 -- Show/hide the info bar (VU meters)
 function OGUI:showInfoBar(show, screen)
     screen = screen or self.default_screen
-    self.msgout("oled", "/oled/gShowInfoBar", screen, show and 1 or 0)
+    self.msgout("osc", "/oled/gShowInfoBar", screen, show and 1 or 0)
 end
 
 -- Clear the screen
 function OGUI:clear(screen)
     screen = screen or self.default_screen
-    self.msgout("oled", "/oled/gClear", screen, 1)
+    self.msgout("osc", "/oled/gClear", screen, 1)
 end
 
 -- Set a single pixel
 function OGUI:setPixel(x, y, color, screen)
     screen = screen or self.default_screen
     color = color or OGUI.COLOR_WHITE
-    self.msgout("oled", "/oled/gSetPixel", screen, x, y, color)
+    self.msgout("osc", "/oled/gSetPixel", screen, x, y, color)
 end
 
 -- Fill an area
 function OGUI:fillArea(x, y, width, height, color, screen)
     screen = screen or self.default_screen
     color = color or OGUI.COLOR_WHITE
-    self.msgout("oled", "/oled/gFillArea", screen, x, y, width, height, color)
+    self.msgout("osc", "/oled/gFillArea", screen, x, y, width, height, color)
 end
 
 -- Draw a circle outline
 function OGUI:circle(x, y, radius, color, screen)
     screen = screen or self.default_screen
     color = color or OGUI.COLOR_WHITE
-    self.msgout("oled", "/oled/gCircle", screen, x, y, radius, color)
+    self.msgout("osc", "/oled/gCircle", screen, x, y, radius, color)
 end
 
 -- Draw a filled circle
 function OGUI:filledCircle(x, y, radius, color, screen)
     screen = screen or self.default_screen
     color = color or OGUI.COLOR_WHITE
-    self.msgout("oled", "/oled/gFilledCircle", screen, x, y, radius, color)
+    self.msgout("osc", "/oled/gFilledCircle", screen, x, y, radius, color)
 end
 
 -- Draw a line
 function OGUI:line(x0, y0, x1, y1, color, screen)
     screen = screen or self.default_screen
     color = color or OGUI.COLOR_WHITE
-    self.msgout("oled", "/oled/gLine", screen, x0, y0, x1, y1, color)
+    self.msgout("osc", "/oled/gLine", screen, x0, y0, x1, y1, color)
 end
 
 -- Draw a box outline
 function OGUI:box(x, y, width, height, color, screen)
     screen = screen or self.default_screen
     color = color or OGUI.COLOR_WHITE
-    self.msgout("oled", "/oled/gBox", screen, x, y, width, height, color)
+    self.msgout("osc", "/oled/gBox", screen, x, y, width, height, color)
 end
 
 -- Invert entire screen
 function OGUI:invert(invert, screen)
     screen = screen or self.default_screen
-    self.msgout("oled", "/oled/gInvert", screen, invert and 1 or 0)
+    self.msgout("osc", "/oled/gInvert", screen, invert and 1 or 0)
 end
 
 -- Invert a rectangular area
 function OGUI:invertArea(x, y, width, height, screen)
     screen = screen or self.default_screen
-    self.msgout("oled", "/oled/gInvertArea", screen, x, y, width, height)
+    self.msgout("osc", "/oled/gInvertArea", screen, x, y, width, height)
 end
 
 -- Draw a character
@@ -118,20 +118,20 @@ function OGUI:character(char, x, y, color, size, screen)
     screen = screen or self.default_screen
     color = color or OGUI.COLOR_WHITE
     size = size or OGUI.SIZE_8
-    self.msgout("oled", "/oled/gCharacter", screen, char, y, x, color, size)
+    self.msgout("osc", "/oled/gCharacter", screen, char, y, x, color, size)
 end
 
 -- Print text (variable arguments)
 function OGUI:println(x, y, height, color, text, screen)
     screen = screen or self.default_screen
     color = color or OGUI.COLOR_WHITE
-    self.msgout("oled", "/oled/gPrintln", screen, x, y, height, color, text)
+    self.msgout("osc", "/oled/gPrintln", screen, x, y, height, color, text)
 end
 
 -- REQUIRED: Update the display after graphics operations
 function OGUI:flip(screen)
     screen = screen or self.default_screen
-    self.msgout("oled", "/oled/gFlip", screen)
+    self.msgout("osc", "/oled/gFlip", screen)
 end
 
 ------------------------------------------------------------------------------
@@ -143,7 +143,7 @@ function OGUI:setLine(line_num, text)
     if line_num < 1 or line_num > 5 then
         error("Line number must be 1-5")
     end
-    self.msgout("oled", "/oled/line/" .. line_num, text)
+    self.msgout("osc", "/oled/line/" .. line_num, text)
 end
 
 -- Invert a line on patch screen (lines 0-4)
@@ -151,7 +151,7 @@ function OGUI:invertLine(line_num)
     if line_num < 0 or line_num > 4 then
         error("Line number must be 0-4 for invertLine")
     end
-    self.msgout("oled", "/oled/invertline", line_num)
+    self.msgout("osc", "/oled/invertline", line_num)
 end
 
 ------------------------------------------------------------------------------

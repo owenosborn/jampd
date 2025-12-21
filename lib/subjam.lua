@@ -13,11 +13,13 @@ function SubJam.load(filepath, jam, output_callback)
     
     chunk() -- Execute to define init/tick in env
     
+    -- Use rawget to only get functions defined in THIS env, not globals
     local instance = {
-        init = env.init,
-        tick = env.tick,
-        notein = env.notein,
-        ctlin = env.ctlin,
+        init = rawget(env, "init"),
+        tick = rawget(env, "tick"),
+        notein = rawget(env, "notein"),
+        ctlin = rawget(env, "ctlin"),
+        msgin = rawget(env, "msgin")
     }
     
     -- Create jam wrapper with custom output routing
@@ -70,3 +72,4 @@ function SubJam.load(filepath, jam, output_callback)
 end
 
 return SubJam
+

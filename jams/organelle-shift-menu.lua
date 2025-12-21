@@ -1,8 +1,13 @@
--- Main Organelle script with sequencer
+-- Main Organelle script with sequencer and presets
 local OGUI = require("lib/ogui").OGUI
 local Sequencer = require("lib/sequencer").Sequencer
 local Presets = require("lib/presets").Presets
 local Latch = require("lib/latch").Latch
+local SubJam = require("lib/subjam")
+
+-- sub jam 
+local pattern_subjam = nil
+local pattern_files = {}
 
 -- State
 local seq = nil
@@ -16,6 +21,7 @@ local delete_armed = false
 
 -- Aux function keys (black keys starting from C#)
 local aux_keys = {61, 63, 66, 68, 70, 73, 75, 78, 80, 82}
+local pattern_select_keys = {60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81, 83}
 
 -- Aux function labels
 local aux_labels = {
@@ -31,19 +37,29 @@ local knob_configs = {
     {"%d ms", function(v) return math.floor(v * 600) end, "Glide"}
 }
 
+-- note flow: notein -> latch -> subjam arp -> sequencer -> output
 function init(jam)
     -- Create Organelle UI with msgout callback
     ogui = OGUI.new(function(...)
         jam.msgout(...)
     end)
     
+    -- latches notes, enabled with shift button function, routes to subjam
+    latch = Latch.new(function(n, v)
+        if pattern_subjam and pattern_subjam.notein then
+            -- Route to pattern's notein
+              pattern_subjam.notein(n, v)
+        end
+    end)
+
+    -- create sequencer, output goes to main jam output
     seq = Sequencer.new({
         tpb = jam.tpb,
         max_events = 1000,
         output = function(type, ...)
             if type == "note" then
-                local note, velocity = ...
-                jam.noteout(note, velocity)
+                local note, velocity, duration = ...
+                jam.noteout(note, velocity, duration)
             elseif type:match("^knob%d$") then
                 local knob_type, value = ...
                 jam.msgout("knobs", knob_type, value)
@@ -53,9 +69,8 @@ function init(jam)
     
     presets = Presets.new("presets")
     
-    latch = Latch.new(function(note, velocity)
-        latchOut(jam, note, velocity)
-    end)
+    -- Scan patterns folder
+    scanPatterns()
     
     displayKnobs()
     ogui:led(OGUI.LED_OFF)
@@ -63,6 +78,50 @@ end
 
 function tick(jam)
     seq:tick()
+    
+    -- Tick pattern if loaded
+    if pattern_subjam and pattern_subjam.tick then
+        pattern_subjam.tick()
+    end
+end
+
+-- Scan patterns folder for jam files
+function scanPatterns()
+    pattern_files = {}
+    local handle = io.popen("ls -1 patterns/*.lua 2>/dev/null | sort")
+    if handle then
+        for line in handle:lines() do
+            table.insert(pattern_files, line)
+        end
+        handle:close()
+    end
+    print("Found " .. #pattern_files .. " patterns")
+end
+
+function patternSelect(i)
+    if i < 1 or i > #pattern_files then
+        print("Pattern " .. i .. " out of range")
+        displayModal("No pattern")
+        return
+    end
+    
+    local filepath = pattern_files[i]
+    print("Loading pattern: " .. filepath)
+    
+    -- Load pattern as SubJam with output routed to sequencer
+    pattern_subjam = SubJam.load(filepath, jam, function(type, ...)
+        if type == "note" then
+            local note, velocity, duration = ...
+            -- Send to sequencer for recording
+            seq:recordNote(note, velocity, duration)
+            -- And send to actual output
+            jam.noteout(note, velocity, duration)
+        end
+    end)
+    
+    -- Extract just the filename for display
+    local filename = filepath:match("([^/]+)%.lua$") or tostring(i)
+    displayModalTwoLines("Pattern", filename)
 end
 
 -- Display all knob values on OLED
@@ -272,6 +331,12 @@ function notein(jam, n, v)
                     return
                 end
             end
+            for i, key in ipairs(pattern_select_keys) do
+                if n == key then
+                    patternSelect(i)
+                    return
+                end
+            end
         end
     else
         if seq:isArmed() and v > 0 then
@@ -280,11 +345,6 @@ function notein(jam, n, v)
         end
         latch:notein(transposed_note, v)
     end
-end
-
-function latchOut(jam, n, v)
-    seq:recordNote(n, v)
-    jam.noteout(n, v)
 end
 
 -- Aux button handler
