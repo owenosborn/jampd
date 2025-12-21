@@ -52,6 +52,7 @@ function init(jam)
         end
     end)
 
+    -- the output of pattern subjam is routed in loadPattern
     -- create sequencer, output goes to main jam output
     seq = Sequencer.new({
         tpb = jam.tpb,
@@ -72,6 +73,9 @@ function init(jam)
     -- Scan patterns folder
     scanPatterns()
     
+    -- load initial pattern
+    loadPattern(1)
+    
     displayKnobs()
     ogui:led(OGUI.LED_OFF)
 end
@@ -84,6 +88,95 @@ function tick(jam)
         pattern_subjam.tick()
     end
 end
+
+-- Input handlers
+function notein(jam, n, v)
+    
+    -- keep track of notes pressed, accessing shift menu is not allowed while notes are pressed
+    notes_held = notes_held + (v > 0 and 1 or -1)
+    notes_held = math.max(0, notes_held)
+    
+    local transposed_note = n + transpose
+    
+    -- route shift keys
+    if aux_pressed then
+        if v > 0 then
+            for i, key in ipairs(aux_keys) do
+                if n == key then
+                    if i ~= 10 then
+                        delete_armed = false
+                    end
+                    auxFunctions[i]()
+                    return
+                end
+            end
+            for i, key in ipairs(pattern_select_keys) do
+                if n == key then
+                    loadPattern(i)
+                    return
+                end
+            end
+        end
+    -- otherwise it is a regular note, start sequener if armed and route to latch 
+    else
+        if seq:isArmed() and v > 0 then
+            seq:startRecording()
+            ogui:led(OGUI.LED_RED)
+        end
+        latch:notein(transposed_note, v)
+    end
+end
+
+-- Aux button handler
+function aux(jam, v)
+    if v == 1 then
+        if seq:isRecording() then
+            seq:endRecording()
+            seq:play()
+            ogui:led(OGUI.LED_GREEN)
+            return
+        end
+        
+        -- only enter shift menu if no notes are being pressed
+        if notes_held == 0 then
+            aux_pressed = true
+            ogui:clear()
+            displayAuxMenu()
+        end
+    else
+        if aux_pressed then
+            aux_pressed = false
+            delete_armed = false
+            ogui:clear()
+            displayKnobs()
+        end
+    end
+end
+
+-- Generic knob handler
+local function handleKnob(jam, knob_num, v)
+    knob_values[knob_num] = v
+    
+    if not aux_pressed then
+        local cfg = knob_configs[knob_num]
+        local display_val = cfg[2](v)
+        ogui:setLine(knob_num, string.format("%d: %s: " .. cfg[1], knob_num, cfg[3], display_val))
+    end
+    
+    jam.msgout("knobs", "knob" .. knob_num, v)
+    
+    if seq:isArmed() then
+        seq:startRecording()
+        ogui:led(OGUI.LED_RED)
+    end
+    seq:recordKnob(knob_num, v)
+end
+
+-- Knob handlers
+function knob1(jam, v) handleKnob(jam, 1, v) end
+function knob2(jam, v) handleKnob(jam, 2, v) end
+function knob3(jam, v) handleKnob(jam, 3, v) end
+function knob4(jam, v) handleKnob(jam, 4, v) end
 
 -- Scan patterns folder for jam files
 function scanPatterns()
@@ -98,7 +191,8 @@ function scanPatterns()
     print("Found " .. #pattern_files .. " patterns")
 end
 
-function patternSelect(i)
+-- load subjam pattern, route output to sequencer and output
+function loadPattern(i)
     if i < 1 or i > #pattern_files then
         print("Pattern " .. i .. " out of range")
         displayModal("No pattern")
@@ -122,43 +216,6 @@ function patternSelect(i)
     -- Extract just the filename for display
     local filename = filepath:match("([^/]+)%.lua$") or tostring(i)
     displayModalTwoLines("Pattern", filename)
-end
-
--- Display all knob values on OLED
-function displayKnobs()
-    for i = 1, 4 do
-        local cfg = knob_configs[i]
-        local display_val = cfg[2](knob_values[i])
-        ogui:setLine(i, string.format("%d: %s: " .. cfg[1], i, cfg[3], display_val))
-    end
-end
-
--- Display aux function menu (2 functions per line)
-function displayAuxMenu()
-    for line = 1, 5 do
-        local left_label = aux_labels[line]
-        if line == 1 then
-            left_label = seq:isPlaying() and "Stop" or "Play"
-        end
-        ogui:setLine(line, string.format("%-8s | %-8s", left_label, aux_labels[line + 5]))
-    end
-end
-
--- Display modal dialog with box and large font
-function displayModal(text)
-    ogui:fillArea(10, 13, 108, 38, OGUI.COLOR_BLACK)
-    ogui:box(10, 13, 108, 38, OGUI.COLOR_WHITE)
-    ogui:println(20, 25, OGUI.SIZE_16, OGUI.COLOR_WHITE, text)
-    ogui:flip()
-end
-
--- Display two-line modal dialog with box and large font
-function displayModalTwoLines(line1, line2)
-    ogui:fillArea(10, 13, 108, 48, OGUI.COLOR_BLACK)
-    ogui:box(10, 13, 108, 48, OGUI.COLOR_WHITE)
-    ogui:println(20, 19, OGUI.SIZE_16, OGUI.COLOR_WHITE, line1)
-    ogui:println(20, 40, OGUI.SIZE_16, OGUI.COLOR_WHITE, line2)
-    ogui:flip()
 end
 
 -- Aux Functions Table
@@ -313,86 +370,41 @@ function applyPreset(settings)
     end
 end
 
--- Input handlers
-function notein(jam, n, v)
-    notes_held = notes_held + (v > 0 and 1 or -1)
-    notes_held = math.max(0, notes_held)
-    
-    local transposed_note = n + transpose
-    
-    if aux_pressed then
-        if v > 0 then
-            for i, key in ipairs(aux_keys) do
-                if n == key then
-                    if i ~= 10 then
-                        delete_armed = false
-                    end
-                    auxFunctions[i]()
-                    return
-                end
-            end
-            for i, key in ipairs(pattern_select_keys) do
-                if n == key then
-                    patternSelect(i)
-                    return
-                end
-            end
-        end
-    else
-        if seq:isArmed() and v > 0 then
-            seq:startRecording()
-            ogui:led(OGUI.LED_RED)
-        end
-        latch:notein(transposed_note, v)
+-- UI helpers
+
+-- Display all knob values on OLED
+function displayKnobs()
+    for i = 1, 4 do
+        local cfg = knob_configs[i]
+        local display_val = cfg[2](knob_values[i])
+        ogui:setLine(i, string.format("%d: %s: " .. cfg[1], i, cfg[3], display_val))
     end
 end
 
--- Aux button handler
-function aux(jam, v)
-    if v == 1 then
-        if seq:isRecording() then
-            seq:endRecording()
-            seq:play()
-            ogui:led(OGUI.LED_GREEN)
-            return
+-- Display aux function menu (2 functions per line)
+function displayAuxMenu()
+    for line = 1, 5 do
+        local left_label = aux_labels[line]
+        if line == 1 then
+            left_label = seq:isPlaying() and "Stop" or "Play"
         end
-        
-        if notes_held == 0 then
-            aux_pressed = true
-            ogui:clear()
-            displayAuxMenu()
-        end
-    else
-        if aux_pressed then
-            aux_pressed = false
-            delete_armed = false
-            ogui:clear()
-            displayKnobs()
-        end
+        ogui:setLine(line, string.format("%-8s | %-8s", left_label, aux_labels[line + 5]))
     end
 end
 
--- Generic knob handler
-local function handleKnob(jam, knob_num, v)
-    knob_values[knob_num] = v
-    
-    if not aux_pressed then
-        local cfg = knob_configs[knob_num]
-        local display_val = cfg[2](v)
-        ogui:setLine(knob_num, string.format("%d: %s: " .. cfg[1], knob_num, cfg[3], display_val))
-    end
-    
-    jam.msgout("knobs", "knob" .. knob_num, v)
-    
-    if seq:isArmed() then
-        seq:startRecording()
-        ogui:led(OGUI.LED_RED)
-    end
-    seq:recordKnob(knob_num, v)
+-- Display modal dialog with box and large font
+function displayModal(text)
+    ogui:fillArea(10, 13, 108, 38, OGUI.COLOR_BLACK)
+    ogui:box(10, 13, 108, 38, OGUI.COLOR_WHITE)
+    ogui:println(20, 25, OGUI.SIZE_16, OGUI.COLOR_WHITE, text)
+    ogui:flip()
 end
 
--- Knob handlers
-function knob1(jam, v) handleKnob(jam, 1, v) end
-function knob2(jam, v) handleKnob(jam, 2, v) end
-function knob3(jam, v) handleKnob(jam, 3, v) end
-function knob4(jam, v) handleKnob(jam, 4, v) end
+-- Display two-line modal dialog with box and large font
+function displayModalTwoLines(line1, line2)
+    ogui:fillArea(10, 13, 108, 48, OGUI.COLOR_BLACK)
+    ogui:box(10, 13, 108, 48, OGUI.COLOR_WHITE)
+    ogui:println(20, 19, OGUI.SIZE_16, OGUI.COLOR_WHITE, line1)
+    ogui:println(20, 40, OGUI.SIZE_16, OGUI.COLOR_WHITE, line2)
+    ogui:flip()
+end
