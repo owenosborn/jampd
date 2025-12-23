@@ -182,7 +182,7 @@ auxFunctions = {
         local display = track:prevPreset()
         if display then
             if track:hasEvents() then
-                track:togglePlayback()  -- Start playing
+                track:startPlayback()  -- Start playing
                 ogui:led(OGUI.LED_GREEN)
             end
             displayModalTwoLines("Preset", display)
@@ -208,7 +208,7 @@ auxFunctions = {
         local display = track:nextPreset()
         if display then
             if track:hasEvents() then
-                track:togglePlayback()  -- Start playing
+                track:startPlayback()  -- Start playing
                 ogui:led(OGUI.LED_GREEN)
             end
             displayModalTwoLines("Preset", display)
@@ -254,6 +254,8 @@ auxFunctions = {
                 displayModalTwoLines("Deleted", " ")
                 -- Load current preset (shifted after delete)
                 local display = track:prevPreset()
+                track:stopPlayback()
+                ogui:led(OGUI.LED_OFF)
                 if display then
                     displayModalTwoLines("Preset", display)
                 end

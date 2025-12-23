@@ -33,6 +33,8 @@ function Track.new(jam, track_id, output_callback)
         if self.pattern and self.pattern.notein then
             self.pattern.notein(note, velocity)
         end
+        -- always pass note offs thru to output 
+        if velocity == 0 then self.output("note", note, velocity) end
     end)
     
     -- Track-specific preset storage
@@ -123,6 +125,21 @@ function Track:togglePlayback()
         self.seq:stop()
         return "stopped"
     end
+end
+
+function Track:startPlayback()
+    self.seq:stop()
+    if self.seq:hasEvents() then
+        self.seq:play()
+        return "playing"
+    else
+        return "empty"
+    end
+end
+
+function Track:stopPlayback()
+    self.seq:stop()
+    return "stopped"
 end
 
 function Track:toggleArm()
