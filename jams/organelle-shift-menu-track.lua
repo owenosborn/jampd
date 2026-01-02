@@ -10,6 +10,7 @@ local track = nil
 local aux_pressed = false
 local notes_held = 0
 local delete_armed = false
+local metro_enabled = false
 
 -- Aux function keys (black keys starting from C#)
 local aux_keys = {61, 63, 66, 68, 70, 73, 75, 78, 80, 82}
@@ -35,6 +36,9 @@ function init(jam)
         jam.msgout(...)
     end)
     
+    -- take over encoder
+    jam.msgout("osc", "/enablepatchsub", 0)
+    
     -- Create track with output callback
     track = Track.new(jam, 1, function(type, ...)
         if type == "note" then
@@ -57,9 +61,23 @@ end
 
 function tick(jam)
     track:tick()
+    if metro_enabled then
+        if jam.every(1) then jam.noteout(100, 20, .025) end
+    end
+    
+    -- keep LED up to date with seq state
+    updateLED()
 end
 
 -- Input handlers
+function encoder(jam, v)
+    print(v)
+end
+
+function encoder_button(jam, v)
+    print(v)
+end
+
 function notein(jam, n, v)
     -- Track note on/off for aux mode blocking
     notes_held = notes_held + (v > 0 and 1 or -1)
@@ -73,6 +91,8 @@ function notein(jam, n, v)
     else
         -- Normal mode: route to track
         track:notein(n, v)
+        
+        -- keep led up to date
         updateLED()
     end
 end
@@ -140,8 +160,6 @@ local function handleKnob(jam, knob_num, v)
         local display_val = cfg[2](v)
         ogui:setLine(knob_num, string.format("%d: %s: " .. cfg[1], knob_num, cfg[3], display_val))
     end
-    
-    updateLED()
 end
 
 function knob1(jam, v) handleKnob(jam, 1, v) end
@@ -236,7 +254,10 @@ auxFunctions = {
     end,
     
     -- Function 9: Placeholder
-    function() end,
+    function() 
+        if metro_enabled then metro_enabled = false 
+        else metro_enabled = true end
+    end,
     
     -- Function 10: Delete preset (requires two taps)
     function()

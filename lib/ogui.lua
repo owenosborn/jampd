@@ -31,6 +31,7 @@ function OGUI.new(msgout_callback)
     local self = setmetatable({}, OGUI)
     self.msgout = msgout_callback or function() end
     self.default_screen = 0
+    self.current_led = nil  -- Track current LED state
     return self
 end
 
@@ -38,9 +39,12 @@ end
 -- LED Control
 ------------------------------------------------------------------------------
 
--- Set LED color (0-7)
+-- Set LED color (0-7) - only sends message if color changed
 function OGUI:led(color)
-    self.msgout("osc", "/led", color)
+    if self.current_led ~= color then
+        self.current_led = color
+        self.msgout("osc", "/led", color)
+    end
 end
 
 ------------------------------------------------------------------------------
