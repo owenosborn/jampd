@@ -58,11 +58,6 @@ end
 function Track:notein(note, velocity)
     local transposed = note + self.transpose
     
-    -- Start recording if armed
-    if self.seq:isArmed() and velocity > 0 then
-        self.seq:startRecording()
-    end
-    
     -- Route to latch (which routes to pattern)
     self.latch:notein(transposed, velocity)
 end
@@ -116,7 +111,7 @@ function Track:togglePlayback()
         return "stopped"
     elseif self.seq:isStopped() then
         if self.seq:hasEvents() then
-            self.seq:play()
+            self.seq:playSync()
             return "playing"
         else
             return "empty"
@@ -130,7 +125,7 @@ end
 function Track:startPlayback()
     self.seq:stop()
     if self.seq:hasEvents() then
-        self.seq:play()
+        self.seq:playSync()
         return "playing"
     else
         return "empty"
@@ -156,7 +151,7 @@ end
 function Track:endRecording()
     if self.seq:isRecording() then
         self.seq:endRecording()
-        self.seq:play()
+        self.seq:playSync()
         return "playing"
     end
 end
@@ -192,6 +187,10 @@ function Track:loadPattern(index)
     self.pattern = SubJam.load(filepath, self.jam, function(type, ...)
         if type == "note" then
             local note, velocity, duration = ...
+            -- Start recording if armed
+            if self.seq:isArmed() and velocity > 0 then
+                self.seq:startRecording()
+            end
             -- Record to sequencer
             self.seq:recordNote(note, velocity, duration)
             -- Output

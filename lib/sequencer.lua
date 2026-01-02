@@ -19,6 +19,7 @@ function Sequencer.new(config)
     self.recording_held_notes = {}
     self.playback_held_notes = {}
     self.internal_tick = 0  -- Our own counter
+    self.sync_pending = false  -- Waiting for beat boundary
     
     return self
 end
@@ -54,7 +55,7 @@ function Sequencer:endRecording()
     end
     
     self.recording_held_notes = {}
-    self.loop_length = current_beat
+    self.loop_length = math.floor(current_beat + 0.5)  -- Round to nearest integer beat
     self:stop()
     self:printInfo()
 end
@@ -65,6 +66,14 @@ function Sequencer:play()
     self.playback_tick = 0
     self.event_index = 1
     self.playback_held_notes = {}
+    self.sync_pending = false
+    return true
+end
+
+function Sequencer:playSync()
+    if #self.events == 0 then return false end
+    -- Mark that we're waiting for the next beat
+    self.sync_pending = true
     return true
 end
 
@@ -75,6 +84,7 @@ function Sequencer:stop()
     end
     self.playback_held_notes = {}
     self.state = "STOPPED"
+    self.sync_pending = false
 end
 
 function Sequencer:toggle()
@@ -129,10 +139,28 @@ function Sequencer:recordKnob(knob_num, value)
     })
 end
 
+-- Check if we're on a beat boundary
+local function is_beat_boundary(tick, tpb)
+    return tick % tpb == 0
+end
+
 -- Playback (call every tick)
 function Sequencer:tick()
     -- Always increment internal tick
     self.internal_tick = self.internal_tick + 1
+    
+    -- If we're waiting to sync, check for beat boundary
+    if self.sync_pending then
+        if is_beat_boundary(self.internal_tick, self.tpb) then
+            -- Start playing now!
+            self.state = "PLAYING"
+            self.playback_tick = 0
+            self.event_index = 1
+            self.playback_held_notes = {}
+            self.sync_pending = false
+        end
+        return  -- Don't play anything yet
+    end
     
     if self.state ~= "PLAYING" then return end
     
@@ -186,11 +214,18 @@ function Sequencer:isStopped()
     return self.state == "STOPPED"
 end
 
+function Sequencer:isSyncing()
+    return self.sync_pending
+end
+
 function Sequencer:hasEvents()
     return #self.events > 0
 end
 
 function Sequencer:getState()
+    if self.sync_pending then
+        return "SYNCING"
+    end
     return self.state
 end
 
@@ -223,6 +258,7 @@ function Sequencer:deserialize(data)
     self.playback_tick = 0
     self.event_index = 1
     self.state = "STOPPED"
+    self.sync_pending = false
     
     print(string.format("Loaded sequence: %.2f beats, %d events", 
                         self.loop_length, #self.events))
@@ -234,7 +270,7 @@ function Sequencer:printInfo(print_callback)
     
     local separator = string.rep("-", 70)
     print_callback(separator)
-    print_callback("SEQUENCER STATE: " .. self.state)
+    print_callback("SEQUENCER STATE: " .. self:getState())
     print_callback("Loop Length: " .. string.format("%.2f", self.loop_length) .. " beats")
     print_callback("Total Events: " .. #self.events)
     print_callback(separator)
@@ -246,7 +282,7 @@ function Sequencer:print(print_callback)
     
     local separator = string.rep("-", 70)
     print_callback(separator)
-    print_callback("SEQUENCER STATE: " .. self.state)
+    print_callback("SEQUENCER STATE: " .. self:getState())
     print_callback("Loop Length: " .. string.format("%.2f", self.loop_length) .. " beats")
     print_callback("Total Events: " .. #self.events)
     print_callback(separator)
