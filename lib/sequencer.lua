@@ -56,6 +56,7 @@ function Sequencer:endRecording()
     
     self.recording_held_notes = {}
     self.loop_length = math.floor(current_beat + 0.5)  -- Round to nearest integer beat
+    if self.loop_length == 0 then self.loop_length = 1 end
     self:stop()
     self:printInfo()
 end
