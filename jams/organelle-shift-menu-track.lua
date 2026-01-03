@@ -19,15 +19,15 @@ local pattern_select_keys = {60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81,
 -- Aux function labels
 local aux_labels = {
     "Play", "Arm", "<", "Save", ">",
-    "Oct-", "Oct+", "Latch", ".", "Delete"
+    "Oct-", "Oct+", "Latch", "Click", "Delete"
 }
 
 -- Knob display configs: {format_string, value_transform_function, label}
 local knob_configs = {
-    {"%d%%", function(v) return math.floor(v * 100) end, "Wave Mix"},
-    {"%d Hz", function(v) return math.floor(v * 7900 + 100) end, "Cutoff"},
-    {"%d%%", function(v) return math.floor(v * 100) end, "Resonance"},
-    {"%d ms", function(v) return math.floor(v * 600) end, "Glide"}
+    {"%d%%", function(v) return math.floor(v * 100) end, "Tone"},
+    {"%d%%", function(v) return math.floor(v * 100) end, "Tone 2"},
+    {"%d%%", function(v) return math.floor(v * 100) end, "Tremelo"},
+    {"%d%%", function(v) return math.floor(v * 100) end, "Space"},
 }
 
 function init(jam)
@@ -130,7 +130,6 @@ function aux(jam, v)
         local state = track:getSeqState()
         if state == "RECORDING" then
             track:endRecording()
-            ogui:led(OGUI.LED_GREEN)
             return
         end
         
@@ -173,10 +172,8 @@ auxFunctions = {
     function()
         local result = track:togglePlayback()
         if result == "playing" then
-            ogui:led(OGUI.LED_GREEN)
             displayModal("Playing")
         elseif result == "stopped" then
-            ogui:led(OGUI.LED_OFF)
             displayModal("Stopped")
         elseif result == "empty" then
             displayModal("Empty")
@@ -187,10 +184,8 @@ auxFunctions = {
     function()
         local result = track:toggleArm()
         if result == "armed" then
-            ogui:led(OGUI.LED_PURPLE)
             displayModal("Armed")
         elseif result == "stopped" then
-            ogui:led(OGUI.LED_OFF)
             displayModal("Stopped")
         end
     end,
@@ -201,7 +196,6 @@ auxFunctions = {
         if display then
             if track:hasEvents() then
                 track:startPlayback()  -- Start playing
-                ogui:led(OGUI.LED_GREEN)
             end
             displayModalTwoLines("Preset", display)
         else
@@ -227,7 +221,6 @@ auxFunctions = {
         if display then
             if track:hasEvents() then
                 track:startPlayback()  -- Start playing
-                ogui:led(OGUI.LED_GREEN)
             end
             displayModalTwoLines("Preset", display)
         else
@@ -276,7 +269,6 @@ auxFunctions = {
                 -- Load current preset (shifted after delete)
                 local display = track:prevPreset()
                 track:stopPlayback()
-                ogui:led(OGUI.LED_OFF)
                 if display then
                     displayModalTwoLines("Preset", display)
                 end
