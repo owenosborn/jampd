@@ -44,10 +44,13 @@ function Sequencer:endRecording()
     
     local current_beat = (self.internal_tick - self.recording_start_tick) / self.tpb
     
+    self.loop_length = math.floor(current_beat + 0.5)  -- Round to length nearest integer beat
+    if self.loop_length == 0 then self.loop_length = 1 end -- make sure it is at least 1 beat
+    
     -- Add note-offs for held notes
     for note, _ in pairs(self.recording_held_notes) do
         table.insert(self.events, {
-            time = current_beat,
+            time = math.min(self.loop_length, current_beat),   -- make sure nothing is past end point
             type = "note",
             note = note,
             velocity = 0
@@ -55,8 +58,7 @@ function Sequencer:endRecording()
     end
     
     self.recording_held_notes = {}
-    self.loop_length = math.floor(current_beat + 0.5)  -- Round to nearest integer beat
-    if self.loop_length == 0 then self.loop_length = 1 end
+
     self:stop()
     self:printInfo()
 end
