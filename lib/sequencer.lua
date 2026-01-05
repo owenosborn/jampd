@@ -149,20 +149,17 @@ end
 
 -- Playback (call every tick)
 function Sequencer:tick()
-    -- Always increment internal tick
     self.internal_tick = self.internal_tick + 1
     
-    -- If we're waiting to sync, check for beat boundary
     if self.sync_pending then
         if is_beat_boundary(self.internal_tick, self.tpb) then
-            -- Start playing now!
             self.state = "PLAYING"
             self.playback_tick = 0
             self.event_index = 1
             self.playback_held_notes = {}
             self.sync_pending = false
         end
-        return  -- Don't play anything yet
+        return
     end
     
     if self.state ~= "PLAYING" then return end
@@ -193,8 +190,9 @@ function Sequencer:tick()
     
     self.playback_tick = self.playback_tick + 1
     
-    -- Loop
-    if current_beat >= self.loop_length then
+    -- Loop: check if the NEXT tick would exceed loop_length
+    local next_beat = self.playback_tick / self.tpb
+    if next_beat >= self.loop_length then
         self.playback_tick = 0
         self.event_index = 1
     end
