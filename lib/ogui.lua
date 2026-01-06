@@ -1,4 +1,4 @@
--- lib/oled.lua
+-- lib/ogui.lua
 -- Organelle UI control (OLED screen and LED) via OSC
 -- Sends OSC messages through a callback function
 
@@ -190,6 +190,52 @@ function OGUI:simpleText(line1, line2, line3, line4, line5)
     if line5 then self:setLine(5, line5) end
 end
 
+------------------------------------------------------------------------------
+-- Encoder Acceleration Helper
+------------------------------------------------------------------------------
+
+local EncoderAccel = {}
+EncoderAccel.__index = EncoderAccel
+
+function EncoderAccel.new(config)
+    local self = setmetatable({}, EncoderAccel)
+    config = config or {}
+    
+    self.last_turn_time = 0
+    self.turn_velocity = 0
+    self.decay_time = config.decay_time or 0.1  -- Seconds before velocity decays
+    self.max_increment = config.max_increment or 100  -- Maximum increment per turn
+    self.accel_rate = config.accel_rate or 0.69  -- Acceleration buildup multiplier
+    
+    return self
+end
+
+-- Calculate increment based on turning velocity
+function EncoderAccel:getIncrement()
+    local current_time = os.clock()
+    local time_since_last = current_time - self.last_turn_time
+    
+    -- If we're turning rapidly, increase velocity
+    if time_since_last < self.decay_time then
+        self.turn_velocity = math.min(self.turn_velocity * self.accel_rate + 1, self.max_increment)
+    else
+        -- Reset velocity if there's been a pause
+        self.turn_velocity = 1
+    end
+    
+    self.last_turn_time = current_time
+    
+    -- Return integer increment (minimum 1)
+    return math.max(1, math.floor(self.turn_velocity))
+end
+
+-- Reset acceleration (useful when switching contexts)
+function EncoderAccel:reset()
+    self.last_turn_time = 0
+    self.turn_velocity = 0
+end
+
 return {
-    OGUI = OGUI
+    OGUI = OGUI,
+    EncoderAccel = EncoderAccel
 }

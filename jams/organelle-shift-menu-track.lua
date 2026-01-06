@@ -2,10 +2,12 @@
 -- Mother jam using organelle_track module
 
 local OGUI = require("lib/ogui").OGUI
+local EncoderAccel = require("lib/ogui").EncoderAccel
 local Track = require("lib/organelle_track").Track
 
 -- State
 local ogui = nil
+local encoder_accel = nil
 local track = nil
 local aux_pressed = false
 local notes_held = 0
@@ -35,6 +37,9 @@ function init(jam)
     ogui = OGUI.new(function(...)
         jam.msgout(...)
     end)
+    
+    -- helper for encoder BPM selection
+    encoder_accel = EncoderAccel.new()
     
     -- take over encoder
     jam.msgout("osc", "/enablepatchsub", 0)
@@ -71,11 +76,24 @@ end
 
 -- Input handlers
 function encoder(jam, v)
-    print(v)
+    local increment = encoder_accel:getIncrement()
+    
+    if v == 1 then
+        -- increase bpm
+        jam.bpm = math.min(250, jam.bpm + increment)
+    else 
+        -- decrease bpm
+        jam.bpm = math.max(20, jam.bpm - increment)
+    end
+    jam.msgout("bpm", jam.bpm)
+    
+    -- Show speed indicator if accelerating for debugging
+    local speed_indicator = ""--increment > 1 and (" (x" .. increment .. ")") or ""
+    displayModalTwoLines("BPM" .. speed_indicator, tostring(math.floor(jam.bpm)))
 end
 
 function encoder_button(jam, v)
-    print(v)
+    
 end
 
 function notein(jam, n, v)
@@ -138,6 +156,7 @@ function aux(jam, v)
             aux_pressed = true
             ogui:clear()
             displayAuxMenu()
+            jam.msgout("osc", "/enablepatchsub", 1) -- take over encoder for tempo selection
         end
     else
         -- Aux released
@@ -147,6 +166,7 @@ function aux(jam, v)
             ogui:clear()
             displayKnobs()
         end
+        jam.msgout("osc", "/enablepatchsub", 0) -- restore encoder
     end
 end
 
