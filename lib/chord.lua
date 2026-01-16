@@ -116,7 +116,13 @@ local extension = {
     ["sus4"] = function(tones, chord) 
                 tones[2] = 5 -- replace 3rd with 4th
               end,
-
+    ["alt"] = function(tones, chord)
+                table.insert(tones, 10) -- dom7
+                tones[3] = 6            -- b5
+                table.insert(tones, 8)  -- #5
+                table.insert(tones, 13) -- b9
+                table.insert(tones, 15) -- #9
+              end,
 }
 
 -- Construct chord from parsed components
