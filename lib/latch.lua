@@ -112,6 +112,39 @@ function Latch:get_notes()
     return self.latched_order
 end
 
+-- Get array of {note, velocity} pairs in press order (for saving)
+function Latch:get_notes_with_velocity()
+    local result = {}
+    for _, note in ipairs(self.latched_order) do
+        table.insert(result, {note, self.latched_notes[note]})
+    end
+    return result
+end
+
+-- Recall latched notes from saved state (e.g., preset)
+-- notes_with_vel is array of {note, velocity} pairs
+function Latch:recall(notes_with_vel)
+    -- Clear any existing latched notes first (send note-offs)
+    for note, _ in pairs(self.latched_notes) do
+        self.callback(note, 0)
+    end
+
+    self.latched_notes = {}
+    self.latched_order = {}
+    self.held_notes = {}
+    self.enabled = true
+
+    -- Send note-ons and populate state
+    for _, nv in ipairs(notes_with_vel) do
+        local note, velocity = nv[1], nv[2]
+        self.callback(note, velocity)
+        self.latched_notes[note] = velocity
+        table.insert(self.latched_order, note)
+    end
+
+    return self
+end
+
 return {
     Latch = Latch
 }
