@@ -67,12 +67,7 @@ function Track:setKnob(knob_num, value)
     
     -- Output knob change
     self.output("knob" .. knob_num, "knob" .. knob_num, value)
-    
-    -- Start recording if armed
-    if self.seq:isArmed() then
-        self.seq:startRecording()
-    end
-    
+
     -- Record to sequencer
     self.seq:recordKnob(knob_num, value)
 end
@@ -187,10 +182,6 @@ function Track:loadPattern(index)
     self.pattern = SubJam.load(filepath, self.jam, function(type, ...)
         if type == "note" then
             local note, velocity, duration = ...
-            -- Start recording if armed
-            if self.seq:isArmed() and velocity > 0 then
-                self.seq:startRecording()
-            end
             -- Record to sequencer
             self.seq:recordNote(note, velocity, duration)
             -- Output

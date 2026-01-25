@@ -41,23 +41,32 @@ end
 
 function Sequencer:endRecording()
     if self.state ~= "RECORDING" then return end
-    
+
     local current_beat = (self.internal_tick - self.recording_start_tick) / self.tpb
-    
-    self.loop_length = math.floor(current_beat + 0.5)  -- Round to length nearest integer beat
+
+    self.loop_length = math.floor(current_beat + 0.5)  -- Round to nearest integer beat
     if self.loop_length == 0 then self.loop_length = 1 end -- make sure it is at least 1 beat
-    
+
     -- Add note-offs for held notes
     for note, _ in pairs(self.recording_held_notes) do
         table.insert(self.events, {
-            time = math.min(self.loop_length, current_beat),   -- make sure nothing is past end point
+            time = self.loop_length,
             type = "note",
             note = note,
             velocity = 0
         })
     end
-    
+
     self.recording_held_notes = {}
+
+    -- Clamp any events past loop_length (iterate from end since they'll be at the end)
+    for i = #self.events, 1, -1 do
+        if self.events[i].time > self.loop_length then
+            self.events[i].time = self.loop_length
+        else
+            break
+        end
+    end
 
     self:stop()
     self:printInfo()
@@ -118,13 +127,18 @@ end
 
 -- Record note
 function Sequencer:recordNote(note, velocity, duration)
+    -- Start recording on first note-on if armed
+    if self.state == "ARMED" and velocity > 0 then
+        self:startRecording()
+    end
+
     local recorded = self:recordEvent({
         type = "note",
         note = note,
         velocity = velocity,
         duration = duration
     })
-    
+
     if recorded and self.state == "RECORDING" then
         if velocity > 0 then
             self.recording_held_notes[note] = true
@@ -136,6 +150,11 @@ end
 
 -- Record knob
 function Sequencer:recordKnob(knob_num, value)
+    -- Start recording on first knob change if armed
+    if self.state == "ARMED" then
+        self:startRecording()
+    end
+
     self:recordEvent({
         type = "knob" .. knob_num,
         value = value
@@ -145,6 +164,20 @@ end
 -- Check if we're on a beat boundary
 local function is_beat_boundary(tick, tpb)
     return tick % tpb == 0
+end
+
+-- Play a single event
+function Sequencer:playEvent(event)
+    if event.type == "note" then
+        self.output("note", event.note, event.velocity, event.duration)
+        if event.velocity > 0 then
+            self.playback_held_notes[event.note] = true
+        else
+            self.playback_held_notes[event.note] = nil
+        end
+    elseif event.type:match("^knob%d$") then
+        self.output(event.type, event.type, event.value)
+    end
 end
 
 -- Playback (call every tick)
@@ -169,30 +202,24 @@ function Sequencer:tick()
     -- Play events at current beat
     while self.event_index <= #self.events do
         local event = self.events[self.event_index]
-        
         if event.time <= current_beat then
-            if event.type == "note" then
-                self.output("note", event.note, event.velocity, event.duration)
-                
-                if event.velocity > 0 then
-                    self.playback_held_notes[event.note] = true
-                else
-                    self.playback_held_notes[event.note] = nil
-                end
-            elseif event.type:match("^knob%d$") then
-                self.output(event.type, event.type, event.value)
-            end
+            self:playEvent(event)
             self.event_index = self.event_index + 1
         else
             break
         end
     end
-    
+
     self.playback_tick = self.playback_tick + 1
-    
+
     -- Loop: check if the NEXT tick would exceed loop_length
     local next_beat = self.playback_tick / self.tpb
     if next_beat >= self.loop_length then
+        -- Play any remaining events before resetting
+        while self.event_index <= #self.events do
+            self:playEvent(self.events[self.event_index])
+            self.event_index = self.event_index + 1
+        end
         self.playback_tick = 0
         self.event_index = 1
     end
