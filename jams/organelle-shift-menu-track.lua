@@ -26,11 +26,18 @@ local aux_labels = {
 
 -- Knob display configs: {format_string, value_transform_function, label}
 local knob_configs = {
-    {"%d%%", function(v) return math.floor(v * 100) end, "Tone"},
-    {"%d%%", function(v) return math.floor(v * 100) end, "Tone 2"},
-    {"%d%%", function(v) return math.floor(v * 100) end, "Tremelo"},
-    {"%d%%", function(v) return math.floor(v * 100) end, "Space"},
+    {"%d%%", function(v) return math.floor(v * 100) end, ""},
+    {"%d%%", function(v) return math.floor(v * 100) end, ""},
+    {"%d%%", function(v) return math.floor(v * 100) end, ""},
+    {"%d%%", function(v) return math.floor(v * 100) end, ""},
 }
+
+local function displayKnob(knob_num, value)
+    if aux_pressed then return end
+    local cfg = knob_configs[knob_num]
+    local display_val = cfg[2](value)
+    ogui:setLine(knob_num, string.format("%d: %s: " .. cfg[1], knob_num, cfg[3], display_val))
+end
 
 function init(jam)
     -- Create Organelle UI
@@ -51,7 +58,9 @@ function init(jam)
             jam.noteout(note, velocity, duration)
         elseif type:match("^knob%d$") then
             local knob_type, value = ...
+            local knob_num = tonumber(knob_type:match("%d"))
             jam.msgout("knobs", knob_type, value)
+            displayKnob(knob_num, value)
         end
     end)
     
@@ -173,12 +182,7 @@ end
 -- Knob handlers
 local function handleKnob(jam, knob_num, v)
     track:setKnob(knob_num, v)
-    
-    if not aux_pressed then
-        local cfg = knob_configs[knob_num]
-        local display_val = cfg[2](v)
-        ogui:setLine(knob_num, string.format("%d: %s: " .. cfg[1], knob_num, cfg[3], display_val))
-    end
+    displayKnob(knob_num, v)
 end
 
 function knob1(jam, v) handleKnob(jam, 1, v) end
