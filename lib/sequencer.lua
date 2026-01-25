@@ -34,7 +34,19 @@ end
 function Sequencer:startRecording()
     print("Recording started")
     self.state = "RECORDING"
-    self.recording_start_tick = self.internal_tick
+
+    -- Snap to nearest beat boundary
+    local ticks_into_beat = self.internal_tick % self.tpb
+    local position_in_beat = ticks_into_beat / self.tpb
+
+    if position_in_beat >= 0.9 then
+        -- Close to next beat, snap forward
+        self.recording_start_tick = (math.floor(self.internal_tick / self.tpb) + 1) * self.tpb
+    else
+        -- Snap to previous beat
+        self.recording_start_tick = math.floor(self.internal_tick / self.tpb) * self.tpb
+    end
+
     self.events = {}
     self.recording_held_notes = {}
 end
@@ -116,8 +128,8 @@ function Sequencer:recordEvent(event)
             return false
         end
         
-        -- Add timestamp
-        event.time = (self.internal_tick - self.recording_start_tick) / self.tpb
+        -- Add timestamp (clamp to 0 if negative due to forward snap)
+        event.time = math.max(0, (self.internal_tick - self.recording_start_tick) / self.tpb)
         table.insert(self.events, event)
         return true
     end
