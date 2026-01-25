@@ -61,6 +61,8 @@ function init(jam)
             local knob_num = tonumber(knob_type:match("%d"))
             jam.msgout("knobs", knob_type, value)
             displayKnob(knob_num, value)
+        elseif type == "flushnotes" then
+            jam.msgout("flushnotes")
         end
     end)
     

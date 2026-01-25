@@ -184,9 +184,19 @@ function Track:loadPattern(index)
     if index < 1 or index > #self.pattern_files then
         return nil
     end
-    
+
+    -- Save latched notes before switching
+    local saved_latch = nil
+    if self.latch.enabled and #self.latch:get_notes() > 0 then
+        saved_latch = self.latch:get_notes_with_velocity()
+        self.latch:disable()
+    end
+
+    -- Flush any scheduled note-offs from previous pattern
+    self.output("flushnotes")
+
     local filepath = self.pattern_files[index]
-    
+
     -- Load pattern as SubJam with output routed through our callback
     self.pattern = SubJam.load(filepath, self.jam, function(type, ...)
         if type == "note" then
@@ -197,9 +207,14 @@ function Track:loadPattern(index)
             self.output("note", note, velocity, duration)
         end
     end)
-    
+
     self.current_pattern_index = index
-    
+
+    -- Recall latched notes so new pattern receives them
+    if saved_latch then
+        self.latch:recall(saved_latch)
+    end
+
     -- Extract filename for display
     return filepath:match("([^/]+)%.lua$") or tostring(index)
 end
