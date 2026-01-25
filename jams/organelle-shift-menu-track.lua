@@ -304,10 +304,7 @@ auxFunctions = {
 -- UI Helper Functions
 function displayKnobs()
     for i = 1, 4 do
-        local cfg = knob_configs[i]
-        local value = track:getKnob(i)
-        local display_val = cfg[2](value)
-        ogui:setLine(i, string.format("%d: %s: " .. cfg[1], i, cfg[3], display_val))
+        displayKnob(i, track:getKnob(i))
     end
 end
 
