@@ -106,6 +106,7 @@ function Track:togglePlayback()
         return "stopped"
     elseif self.seq:isStopped() then
         if self.seq:hasEvents() then
+            self.latch:disable()
             self.seq:playSync()
             return "playing"
         else
@@ -120,6 +121,7 @@ end
 function Track:startPlayback()
     self.seq:stop()
     if self.seq:hasEvents() then
+        self.latch:disable()
         self.seq:playSync()
         return "playing"
     else
@@ -146,6 +148,7 @@ end
 function Track:endRecording()
     if self.seq:isRecording() then
         self.seq:endRecording()
+        self.latch:disable()
         self.seq:playSync()
         return "playing"
     end
