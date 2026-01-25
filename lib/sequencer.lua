@@ -232,6 +232,11 @@ function Sequencer:tick()
             self:playEvent(self.events[self.event_index])
             self.event_index = self.event_index + 1
         end
+        -- Send note-offs for any still-held notes (handles missing note-offs in sequence)
+        for note, _ in pairs(self.playback_held_notes) do
+            self.output("note", note, 0)
+        end
+        self.playback_held_notes = {}
         self.playback_tick = 0
         self.event_index = 1
     end
