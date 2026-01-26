@@ -235,6 +235,8 @@ function Track:savePreset()
         knob2 = self.knob_values[2],
         knob3 = self.knob_values[3],
         knob4 = self.knob_values[4],
+        transpose = self.transpose,
+        pattern = self.current_pattern_index,
         sequence = self.seq:hasEvents() and self.seq:serialize() or nil,
         latched = latched
     }
@@ -246,6 +248,17 @@ function Track:loadPreset(settings)
     if self.seq:isPlaying() then
         self.seq:stop()
     end
+
+    -- Disable latch first so loadPattern doesn't save/recall its own
+    self.latch:disable()
+
+    -- Load pattern if specified
+    if settings.pattern and settings.pattern > 0 then
+        self:loadPattern(settings.pattern)
+    end
+
+    -- Restore transpose
+    self.transpose = settings.transpose or 0
 
     for i = 1, 4 do
         self.knob_values[i] = settings["knob" .. i] or 0
