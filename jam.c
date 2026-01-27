@@ -11,7 +11,7 @@ typedef struct _jam {
     t_object x_obj;
     lua_State *L;
     t_outlet *msg_out;     // left outlet: musical messages
-    t_outlet *info_out;    // right outlet: info/debug
+    t_outlet *tc_out;      // right outlet: tick counter
     t_float tpb;           // ticks per beat
     t_float bpm;           // beats per minute
     long tc;               // tick counter
@@ -286,8 +286,8 @@ static int load_jam(t_jam *x, t_symbol *s) {
         lua_pop(L, 1);  // pop non-function
     }
     
-    // Send load confirmation to info outlet
-    outlet_symbol(x->info_out, gensym("loaded"));
+    // Send load confirmation to left outlet
+    outlet_symbol(x->msg_out, gensym("loaded"));
     post("jam: loaded %s", s->s_name);
     return 0;
 }
@@ -295,64 +295,36 @@ static int load_jam(t_jam *x, t_symbol *s) {
 // Handle tick/bang messages
 static void jam_bang(t_jam *x) {
     lua_State *L = x->L;
-    
+
     // Update jam values
     update_jam(x);
-    
+
+    // Output tc on right outlet first
+    outlet_float(x->tc_out, (t_float)x->tc);
+
     // Call global tick(jam)
     lua_getglobal(L, "tick");
     if (!lua_isfunction(L, -1)) {
         lua_pop(L, 1);
+        x->tc++;
         return;
     }
-    
+
     lua_getglobal(L, "jam");
-    
+
     if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
         pd_error(x, "jam: error in tick(): %s", lua_tostring(L, -1));
-        // Also send error to info outlet
-        t_atom argv[2];
-        SETSYMBOL(&argv[0], gensym("error"));
-        SETSYMBOL(&argv[1], gensym(lua_tostring(L, -1)));
-        outlet_list(x->info_out, &s_list, 2, argv);
         lua_pop(L, 1);
     }
-    
+
     // Increment counters
     x->tc++;
 }
 
-// Handle float messages - set tc, call tick, then increment
+// Handle float messages - just set tc
 static void jam_float(t_jam *x, t_floatarg f) {
-    lua_State *L = x->L;
-    
-    // Set tc from the float input
     x->tc = (long)f;
-    
-    // Update jam values
     update_jam(x);
-    
-    // Call global tick(jam)
-    lua_getglobal(L, "tick");
-    if (!lua_isfunction(L, -1)) {
-        lua_pop(L, 1);
-        return;
-    }
-    
-    lua_getglobal(L, "jam");
-    
-    if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
-        pd_error(x, "jam: error in tick(): %s", lua_tostring(L, -1));
-        // Also send error to info outlet
-        t_atom argv[2];
-        SETSYMBOL(&argv[0], gensym("error"));
-        SETSYMBOL(&argv[1], gensym(lua_tostring(L, -1)));
-        outlet_list(x->info_out, &s_list, 2, argv);
-        lua_pop(L, 1);
-    }
-    
-    // Increment counter so next bang doesn't replay same tick
-    x->tc++;
 }
 
 // Handle note messages: note <note> <velocity> [channel]
@@ -476,7 +448,7 @@ static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
 // Reset tick counter
 static void jam_reset(t_jam *x) {
     x->tc = 0;
-    outlet_symbol(x->info_out, gensym("reset"));
+    outlet_symbol(x->msg_out, gensym("reset"));
     post("jam: reset counters");
 }
 
@@ -533,7 +505,7 @@ static void *jam_new(t_symbol *s, int argc, t_atom *argv) {
     
     // Create outlets (left to right)
     x->msg_out = outlet_new(&x->x_obj, &s_list);   // musical messages
-    x->info_out = outlet_new(&x->x_obj, &s_symbol); // info/debug
+    x->tc_out = outlet_new(&x->x_obj, &s_float);   // tick counter
     
     // Initialize Lua
     x->L = luaL_newstate();

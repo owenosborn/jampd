@@ -118,8 +118,8 @@ end
 - **`msg [args...]`** - Route to `msgin` handler
 
 ### Outlets
-- **Left outlet** - Musical messages (`note` and `makenote` lists)
-- **Right outlet** - Info and debug messages (prints from Lua)
+- **Left outlet** - Musical messages (`note`, `makenote`, `loaded`, `reset`)
+- **Right outlet** - Tick counter (outputs tc before each tick)
 
 ## Design Philosophy
 
