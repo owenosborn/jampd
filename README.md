@@ -71,7 +71,14 @@ end
 ```
 
 ### `msgin(jam, ...)`
-Generic message handler for list messages.
+Called when a msg message arrives. Receives arbitrary arguments.
+
+```lua
+function msgin(jam, ...)
+    local args = {...}
+    -- Process incoming message
+end
+```
 
 ## Basic Jam Structure
 
@@ -108,6 +115,7 @@ end
 - **`bpm [number]`** - Set tempo
 - **`tpb [number]`** - Set ticks per beat resolution
 - **`note [note] [velocity] [channel]`** - Route to `notein` handler
+- **`msg [args...]`** - Route to `msgin` handler
 
 ### Outlets
 - **Left outlet** - Musical messages (`note` and `makenote` lists)

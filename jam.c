@@ -394,6 +394,39 @@ static void jam_note(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
     }
 }
 
+// Handle msg messages: msg <args>... -> msgin(jam, args...)
+static void jam_msg(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
+    lua_State *L = x->L;
+
+    // Update jam values first
+    update_jam(x);
+
+    // Get msgin handler
+    lua_getglobal(L, "msgin");
+    if (!lua_isfunction(L, -1)) {
+        lua_pop(L, 1);
+        return;  // No handler, silently ignore
+    }
+
+    // Push jam table
+    lua_getglobal(L, "jam");
+
+    // Push all arguments
+    for (int i = 0; i < argc; i++) {
+        if (argv[i].a_type == A_FLOAT) {
+            lua_pushnumber(L, atom_getfloat(&argv[i]));
+        } else if (argv[i].a_type == A_SYMBOL) {
+            lua_pushstring(L, atom_getsymbol(&argv[i])->s_name);
+        }
+    }
+
+    // Call msgin(jam, ...)
+    if (lua_pcall(L, argc + 1, 0, 0) != LUA_OK) {
+        pd_error(x, "jam: error in msgin: %s", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+}
+
 // Handle list messages: list <function_name> <args>...
 // Routes to any Lua function by name
 static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
@@ -542,6 +575,8 @@ void jam_setup(void) {
     class_addlist(jam_class, jam_list);
     class_addmethod(jam_class, (t_method)jam_note,
                     gensym("note"), A_GIMME, 0);
+    class_addmethod(jam_class, (t_method)jam_msg,
+                    gensym("msg"), A_GIMME, 0);
     class_addmethod(jam_class, (t_method)load_jam,
                     gensym("load"), A_SYMBOL, 0);
     class_addmethod(jam_class, (t_method)jam_reset, 
