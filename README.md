@@ -33,7 +33,7 @@ jam.every(1, 1/2)  -- Every beat, offset by half a beat
 ```
 
 - **`interval`** - Number of beats between triggers (default: 1)
-- **`offset`** - Beat offset for rhythmic displacement (default: 0)
+- **`offset`** - Beat offset for rhythmic displacement (default: 0). Delays triggers by this many beats. Does not wrap - an offset of 2.5 delays by exactly 2.5 beats. Returns false until the offset time has elapsed. Useful for swing (small values like `1/6`) or staggered pattern starts (larger values).
 
 #### `jam.once(beat)`
 Returns true exactly once at the specified beat number.
