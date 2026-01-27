@@ -111,6 +111,7 @@ end
 ### Messages
 - **`load [filename]`** - Load a Lua jam script
 - **`bang`** - Advance one tick (typically driven by `[metro]`)
+- **`float`** - Set tick counter (does not execute tick)
 - **`reset`** - Reset tick counter to 0
 - **`bpm [number]`** - Set tempo
 - **`tpb [number]`** - Set ticks per beat resolution
