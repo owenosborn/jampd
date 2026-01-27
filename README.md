@@ -57,15 +57,6 @@ jam.noteout(60, 100, 1)      -- C4, velocity 100, 1 beat duration
 Output format no duration: `note [note] [velocity] [channel]`
 Output format with duration: `makenote [note] [velocity] [duration] [channel]`
 
-#### `jam.ctlout(controller, value)`
-Send a MIDI CC message.
-
-```lua
-jam.ctlout(7, 64)      -- Volume to 64 on output channel
-```
-
-Output format: `ctl [controller] [value] [channel]`
-
 ## Input Handlers
 
 Jam scripts can respond to incoming messages by implementing handler functions:
@@ -79,17 +70,8 @@ function notein(jam, note, velocity)
 end
 ```
 
-### `ctlin(jam, controller, value)`
-Called when a CC message arrives.
-
-```lua
-function ctlin(jam, controller, value)
-    -- Process incoming CC
-end
-```
-
 ### `msgin(jam, ...)`
-Generic fallback for any unhandled list messages.
+Generic message handler for list messages.
 
 ## Basic Jam Structure
 
@@ -125,11 +107,10 @@ end
 - **`reset`** - Reset tick counter to 0
 - **`bpm [number]`** - Set tempo
 - **`tpb [number]`** - Set ticks per beat resolution
-- **`list note [args]`** - Route to `notein` handler
-- **`list ctl [args]`** - Route to `ctlin` handler
+- **`note [note] [velocity] [channel]`** - Route to `notein` handler
 
 ### Outlets
-- **Left outlet** - Musical messages (`note` and `ctl` lists)
+- **Left outlet** - Musical messages (`note` and `makenote` lists)
 - **Right outlet** - Info and debug messages (prints from Lua)
 
 ## Design Philosophy

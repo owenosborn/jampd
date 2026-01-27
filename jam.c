@@ -61,32 +61,6 @@ static int l_noteout(lua_State *L) {
     return 0;
 }
 
-// Lua C function to implement jam.ctlout()
-static int l_ctlout(lua_State *L) {
-    lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
-    t_jam *x = (t_jam *)lua_touserdata(L, -1);
-    lua_pop(L, 1);
-    
-    int controller = luaL_checkinteger(L, 1);
-    int value = luaL_checkinteger(L, 2);
-    
-    // Get channel from jam.ch
-    lua_getglobal(L, "jam");
-    lua_getfield(L, -1, "ch");
-    int channel = (int)lua_tonumber(L, -1);
-    lua_pop(L, 2);
-    
-    // Create and send PD message: [ctl 7 64 1(
-    t_atom argv[4];
-    SETSYMBOL(&argv[0], gensym("ctl"));
-    SETFLOAT(&argv[1], (t_float)controller);
-    SETFLOAT(&argv[2], (t_float)value);
-    SETFLOAT(&argv[3], (t_float)channel);
-    outlet_list(x->msg_out, &s_list, 4, argv);
-    
-    return 0;
-}
-
 // Lua C function to implement jam.msgout()
 static int l_msgout(lua_State *L) {
     lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
@@ -199,9 +173,6 @@ static void init_jam(t_jam *x) {
     lua_pushcfunction(L, l_noteout);
     lua_setfield(L, -2, "noteout");
     
-    lua_pushcfunction(L, l_ctlout);
-    lua_setfield(L, -2, "ctlout");
- 
     lua_pushcfunction(L, l_msgout);
     lua_setfield(L, -2, "msgout");
 
@@ -423,45 +394,6 @@ static void jam_note(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
     }
 }
 
-// Handle ctl messages: ctl <controller> <value> [channel]
-static void jam_ctl(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
-    lua_State *L = x->L;
-    
-    if (argc < 2) {
-        pd_error(x, "jam: ctl requires at least 2 arguments (controller, value)");
-        return;
-    }
-    
-    // Update jam values first
-    update_jam(x);
-    
-    // Get ctlin handler
-    lua_getglobal(L, "ctlin");
-    if (!lua_isfunction(L, -1)) {
-        lua_pop(L, 1);
-        return;  // No handler, silently ignore
-    }
-    
-    // Push jam table
-    lua_getglobal(L, "jam");
-    
-    // Push controller and value
-    lua_pushnumber(L, atom_getfloat(&argv[0]));
-    lua_pushnumber(L, atom_getfloat(&argv[1]));
-    
-    // Push optional channel
-    if (argc >= 3) {
-        lua_pushnumber(L, atom_getfloat(&argv[2]));
-    }
-    
-    // Call ctlin(jam, controller, value, [channel])
-    int nargs = argc >= 3 ? 4 : 3;
-    if (lua_pcall(L, nargs, 0, 0) != LUA_OK) {
-        pd_error(x, "jam: error in ctlin: %s", lua_tostring(L, -1));
-        lua_pop(L, 1);
-    }
-}
-
 // Handle list messages: list <function_name> <args>...
 // Routes to any Lua function by name
 static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
@@ -608,11 +540,9 @@ void jam_setup(void) {
     class_addbang(jam_class, jam_bang);
     class_addfloat(jam_class, jam_float);
     class_addlist(jam_class, jam_list);
-    class_addmethod(jam_class, (t_method)jam_note, 
+    class_addmethod(jam_class, (t_method)jam_note,
                     gensym("note"), A_GIMME, 0);
-    class_addmethod(jam_class, (t_method)jam_ctl, 
-                    gensym("ctl"), A_GIMME, 0);
-    class_addmethod(jam_class, (t_method)load_jam, 
+    class_addmethod(jam_class, (t_method)load_jam,
                     gensym("load"), A_SYMBOL, 0);
     class_addmethod(jam_class, (t_method)jam_reset, 
                     gensym("reset"), 0);
