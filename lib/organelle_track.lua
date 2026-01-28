@@ -255,6 +255,8 @@ function Track:loadPreset(settings)
 
     if settings.sequence then
         self.seq:deserialize(settings.sequence)
+    else
+        self.seq:clear()
     end
 end
 
