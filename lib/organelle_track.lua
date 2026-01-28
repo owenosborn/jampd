@@ -123,14 +123,8 @@ function Track:startPlayback()
     if self.seq:hasEvents() then
         self.latch:disable()
         self.seq:playSync()
-        -- Restore latched notes from preset if pending
-        if self.pending_latch and #self.pending_latch > 0 then
-            self.latch:recall(self.pending_latch)
-        end
-        self.pending_latch = nil
         return "playing"
     else
-        self.pending_latch = nil
         return "empty"
     end
 end
@@ -225,11 +219,6 @@ end
 
 -- Preset management
 function Track:savePreset()
-    local latched = nil
-    if self.latch.enabled and #self.latch:get_notes() > 0 then
-        latched = self.latch:get_notes_with_velocity()
-    end
-
     local settings = {
         knob1 = self.knob_values[1],
         knob2 = self.knob_values[2],
@@ -237,8 +226,7 @@ function Track:savePreset()
         knob4 = self.knob_values[4],
         transpose = self.transpose,
         pattern = self.current_pattern_index,
-        sequence = self.seq:hasEvents() and self.seq:serialize() or nil,
-        latched = latched
+        sequence = self.seq:hasEvents() and self.seq:serialize() or nil
     }
 
     return self.presets:save(settings)
@@ -267,15 +255,6 @@ function Track:loadPreset(settings)
 
     if settings.sequence then
         self.seq:deserialize(settings.sequence)
-        -- Store latched notes for startPlayback to restore
-        self.pending_latch = settings.latched
-    else
-        -- No sequence, recall latch immediately
-        if settings.latched and #settings.latched > 0 then
-            self.latch:recall(settings.latched)
-        else
-            self.latch:disable()
-        end
     end
 end
 
