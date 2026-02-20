@@ -48,10 +48,11 @@ Duration is in beats, and is optional.  If duration is provided, the note will b
 
 ```lua
 jam.noteout(60, 100, 1)      -- C4, velocity 100, 1 beat duration
+jam.noteout(60.5, 100, 1)    -- microtone between C4 and C#4
 ```
 
-- **`note`** - MIDI note number (0-127)
-- **`velocity`** - Note velocity (0-127)
+- **`note`** - MIDI note number, supports floats for microtonal pitches (e.g. `60.5`)
+- **`velocity`** - Note velocity (0-127), supports floats
 - **`duration`** - (optional) Duration in beats
 
 Output format no duration: `note [note] [velocity] [channel]`

@@ -198,7 +198,7 @@ Inside your functions, `jam` gives you:
 |----------|-------------|
 | `jam.every(interval, offset)` | True when tick aligns with interval |
 | `jam.once(beat)` | True only at specific beat number |
-| `jam.noteout(note, vel, dur)` | Send MIDI note |
+| `jam.noteout(note, vel, dur)` | Send MIDI note (note accepts floats for microtones) |
 | `jam.msgout(...)` | Send arbitrary message to Pd |
 
 ## Tips

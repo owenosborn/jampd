@@ -15,6 +15,7 @@ typedef struct _jam {
     t_float tpb;           // ticks per beat
     t_float bpm;           // beats per minute
     long tc;               // tick counter
+    long tc_wrap;          // largest beat-aligned value safe for t_float output
 } t_jam;
 
 // Lua C function to implement jam.noteout()
@@ -25,8 +26,8 @@ static int l_noteout(lua_State *L) {
     lua_pop(L, 1);
     
     // Get arguments: note, velocity, duration (optional, in beats)
-    int note = luaL_checkinteger(L, 1);
-    int velocity = luaL_checkinteger(L, 2);
+    double note = luaL_checknumber(L, 1);
+    double velocity = luaL_checknumber(L, 2);
     double duration_beats = luaL_optnumber(L, 3, 0.0);
     
     // Get channel from jam.ch
@@ -300,7 +301,7 @@ static void jam_bang(t_jam *x) {
     update_jam(x);
 
     // Output tc on right outlet first
-    outlet_float(x->tc_out, (t_float)x->tc);
+    outlet_float(x->tc_out, (t_float)(x->tc % x->tc_wrap));
 
     // Call global tick(jam)
     lua_getglobal(L, "tick");
@@ -317,7 +318,6 @@ static void jam_bang(t_jam *x) {
         lua_pop(L, 1);
     }
 
-    // Increment counters
     x->tc++;
 }
 
@@ -502,7 +502,10 @@ static void *jam_new(t_symbol *s, int argc, t_atom *argv) {
         x->tpb = atom_getfloat(&argv[0]);
     if (argc > 1 && argv[1].a_type == A_FLOAT)
         x->bpm = atom_getfloat(&argv[1]);
-    
+
+    // Largest multiple of tpb below 2^24 (t_float precision limit)
+    x->tc_wrap = (16000000L / (long)x->tpb) * (long)x->tpb;
+
     // Create outlets (left to right)
     x->msg_out = outlet_new(&x->x_obj, &s_list);   // musical messages
     x->tc_out = outlet_new(&x->x_obj, &s_float);   // tick counter
