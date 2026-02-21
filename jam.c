@@ -16,6 +16,7 @@ typedef struct _jam {
     t_float bpm;           // beats per minute
     long tc;               // tick counter
     long tc_wrap;          // largest beat-aligned value safe for t_float output
+    t_float link_phase_prev; // previous Link beat phase for wraparound detection
 } t_jam;
 
 // Lua C function to implement jam.noteout()
@@ -445,6 +446,26 @@ static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
     }
 }
 
+// Handle linkphase messages: linkphase <phase 0-1>
+// Advances tc to match Link beat phase, firing ticks as needed
+static void jam_linkphase(t_jam *x, t_floatarg phase) {
+    long target = (long)(phase * x->tpb);
+    long current = x->tc % (long)x->tpb;
+
+    long delta;
+    if (phase < x->link_phase_prev && x->link_phase_prev > 0.5) {
+        // beat boundary crossed
+        delta = ((long)x->tpb - current) + target;
+    } else {
+        delta = target - current;
+    }
+
+    for (long i = 0; i < delta && delta < (long)x->tpb; i++)
+        jam_bang(x);
+
+    x->link_phase_prev = phase;
+}
+
 // Reset tick counter
 static void jam_reset(t_jam *x) {
     x->tc = 0;
@@ -496,6 +517,7 @@ static void *jam_new(t_symbol *s, int argc, t_atom *argv) {
     x->tpb = 180.0;
     x->bpm = 60.0;
     x->tc = 0;
+    x->link_phase_prev = 0.0;
     
     // Parse arguments (optional: tpb, bpm)
     if (argc > 0 && argv[0].a_type == A_FLOAT)
@@ -558,6 +580,8 @@ void jam_setup(void) {
                     gensym("reset"), 0);
     class_addmethod(jam_class, (t_method)jam_bpm, 
                     gensym("bpm"), A_FLOAT, 0);
-    class_addmethod(jam_class, (t_method)jam_tpb, 
+    class_addmethod(jam_class, (t_method)jam_tpb,
                     gensym("tpb"), A_FLOAT, 0);
+    class_addmethod(jam_class, (t_method)jam_linkphase,
+                    gensym("linkphase"), A_FLOAT, 0);
 }
