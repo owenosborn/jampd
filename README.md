@@ -112,6 +112,7 @@ end
 ### Messages
 - **`load [filename]`** - Load a Lua jam script
 - **`bang`** - Advance one tick (typically driven by `[metro]`)
+- **`linkphase [0-1]`** - Sync to Ableton Link beat phase. Call every DSP block with the current beat phase (0=beat start, 1=beat end). Fires as many ticks as needed to keep `tc` aligned with Link. Handles beat boundary wraparound. When using Link, omit the `[metro]` and drive jam with `linkphase` instead.
 - **`float`** - Set tick counter (does not execute tick)
 - **`reset`** - Reset tick counter to 0
 - **`bpm [number]`** - Set tempo

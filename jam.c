@@ -449,6 +449,8 @@ static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
 // Handle linkphase messages: linkphase <phase 0-1>
 // Advances tc to match Link beat phase, firing ticks as needed
 static void jam_linkphase(t_jam *x, t_floatarg phase) {
+    if (phase < 0.0) return;
+    if (phase > 1.0) phase = phase - (long)phase;
     long target = (long)(phase * x->tpb);
     long current = x->tc % (long)x->tpb;
 
