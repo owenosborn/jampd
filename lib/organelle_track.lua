@@ -22,6 +22,7 @@ function Track.new(jam, track_id, output_callback)
     -- Sequencer outputs through our callback
     self.seq = Sequencer.new({
         tpb = jam.tpb,
+        tc = jam.tc,  -- sync with global tick to avoid drift on reload
         max_events = 1000,
         output = function(type, ...)
             self.output(type, ...)
@@ -33,8 +34,11 @@ function Track.new(jam, track_id, output_callback)
         if self.pattern and self.pattern.notein then
             self.pattern.notein(note, velocity)
         end
-        -- always pass note offs thru to output 
-        if velocity == 0 then self.output("note", note, velocity) end
+        -- always pass note offs thru to output and seq ( helps with stuck notes )
+        if velocity == 0 then 
+            self.output("note", note, velocity) 
+            self.seq:recordNote(note, velocity, duration)
+        end
     end)
     
     -- Track-specific preset storage
@@ -60,6 +64,13 @@ function Track:notein(note, velocity)
     
     -- Route to latch (which routes to pattern)
     self.latch:notein(transposed, velocity)
+end
+
+-- don't transpose midi
+function Track:midinotein(note, velocity)
+    
+    -- Route to latch (which routes to pattern)
+    self.latch:notein(note, velocity)
 end
 
 function Track:setKnob(knob_num, value)
@@ -233,9 +244,9 @@ function Track:savePreset()
 end
 
 function Track:loadPreset(settings)
-    if self.seq:isPlaying() then
-        self.seq:stop()
-    end
+    -- Always stop sequencer and flush notes to prevent stuck notes
+    self.seq:stop()
+    self.output("flushnotes")
 
     -- Disable latch first so loadPattern doesn't save/recall its own
     self.latch:disable()
@@ -278,7 +289,19 @@ function Track:prevPreset()
     return nil
 end
 
+function Track:loadCurrentPreset()
+    local settings = self.presets:loadCurrent()
+    if settings then
+        self:loadPreset(settings)
+        return self.presets:getDisplayString()
+    end
+    return nil
+end
+
 function Track:deletePreset()
+    -- Always clear latch and flush notes on delete
+    self.latch:disable()
+    self.output("flushnotes")
     return self.presets:delete()
 end
 

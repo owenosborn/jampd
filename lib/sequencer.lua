@@ -4,12 +4,12 @@ Sequencer.__index = Sequencer
 
 function Sequencer.new(config)
     local self = setmetatable({}, Sequencer)
-    
+
     config = config or {}
     self.tpb = config.tpb or 180
     self.max_events = config.max_events or 1000
     self.output = config.output or function() end
-    
+
     self.state = "STOPPED"
     self.events = {}
     self.recording_start_tick = 0
@@ -18,9 +18,14 @@ function Sequencer.new(config)
     self.event_index = 1
     self.recording_held_notes = {}
     self.playback_held_notes = {}
-    self.internal_tick = 0  -- Our own counter
+    self.internal_tick = config.tc or 0  -- Sync with global tick on init
     self.sync_pending = false  -- Waiting for beat boundary
-    
+
+    -- Transition support (for seamless preset switching)
+    self.pending_events = nil
+    self.pending_loop_length = nil
+    self.transition_pending = false
+
     return self
 end
 
@@ -102,9 +107,11 @@ function Sequencer:playSync()
 end
 
 function Sequencer:stop()
-    -- Send note-offs for any held notes
-    for note, _ in pairs(self.playback_held_notes) do
-        self.output("note", note, 0)
+    -- Send note-offs for any held notes (count handles overlapping notes)
+    for note, count in pairs(self.playback_held_notes) do
+        for i = 1, count do
+            self.output("note", note, 0)
+        end
     end
     self.playback_held_notes = {}
     self.state = "STOPPED"
@@ -183,9 +190,15 @@ function Sequencer:playEvent(event)
     if event.type == "note" then
         self.output("note", event.note, event.velocity, event.duration)
         if event.velocity > 0 then
-            self.playback_held_notes[event.note] = true
+            -- Reference count note-ons (same note can be played multiple times)
+            self.playback_held_notes[event.note] = (self.playback_held_notes[event.note] or 0) + 1
         else
-            self.playback_held_notes[event.note] = nil
+            local count = self.playback_held_notes[event.note] or 0
+            if count > 1 then
+                self.playback_held_notes[event.note] = count - 1
+            else
+                self.playback_held_notes[event.note] = nil
+            end
         end
     elseif event.type:match("^knob%d$") then
         self.output(event.type, event.type, event.value)
@@ -233,10 +246,24 @@ function Sequencer:tick()
             self.event_index = self.event_index + 1
         end
         -- Send note-offs for any still-held notes (handles missing note-offs in sequence)
-        for note, _ in pairs(self.playback_held_notes) do
-            self.output("note", note, 0)
+        for note, count in pairs(self.playback_held_notes) do
+            for i = 1, count do
+                self.output("note", note, 0)
+            end
         end
         self.playback_held_notes = {}
+
+        -- Check for pending transition (seamless preset switch)
+        if self.transition_pending then
+            -- Swap to new sequence
+            self.events = self.pending_events
+            self.loop_length = self.pending_loop_length
+            self.pending_events = nil
+            self.pending_loop_length = nil
+            self.transition_pending = false
+            print("Transitioned to new sequence")
+        end
+
         self.playback_tick = 0
         self.event_index = 1
     end
@@ -292,20 +319,33 @@ function Sequencer:serialize()
 end
 
 -- Load sequence from saved data
-function Sequencer:deserialize(data)
-    if not data then 
+-- If currently playing, stages transition for next beat boundary
+function Sequencer:deserialize(data, immediate)
+    if not data then
         self:clear()
-        return 
+        return
     end
-    
+
+    -- If playing and not forcing immediate, stage transition
+    if self.state == "PLAYING" and not immediate then
+        self.pending_events = data.events or {}
+        self.pending_loop_length = data.loop_length or 0
+        self.transition_pending = true
+        print(string.format("Staged sequence transition: %.2f beats, %d events",
+                            self.pending_loop_length, #self.pending_events))
+        return
+    end
+
+    -- Otherwise load immediately
     self.events = data.events or {}
     self.loop_length = data.loop_length or 0
     self.playback_tick = 0
     self.event_index = 1
     self.state = "STOPPED"
     self.sync_pending = false
-    
-    print(string.format("Loaded sequence: %.2f beats, %d events", 
+    self.transition_pending = false
+
+    print(string.format("Loaded sequence: %.2f beats, %d events",
                         self.loop_length, #self.events))
 end
 

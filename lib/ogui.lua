@@ -203,7 +203,7 @@ function EncoderAccel.new(config)
     
     self.last_turn_time = 0
     self.turn_velocity = 0
-    self.decay_time = config.decay_time or 0.1  -- Seconds before velocity decays
+    self.decay_time = config.decay_time or 0.05  -- Seconds before velocity decays
     self.max_increment = config.max_increment or 100  -- Maximum increment per turn
     self.accel_rate = config.accel_rate or 0.69  -- Acceleration buildup multiplier
     

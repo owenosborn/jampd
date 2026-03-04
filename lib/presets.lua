@@ -87,6 +87,14 @@ function Presets:next()
     end
 end
 
+-- Load current preset (useful after delete adjusts index)
+function Presets:loadCurrent()
+    if self.current_index == 0 or #self.preset_list == 0 then
+        return nil
+    end
+    return self:load(self.current_index)
+end
+
 -- Helper function to serialize a value (handles nested tables)
 local function serialize_value(v, indent)
     indent = indent or ""
