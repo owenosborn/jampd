@@ -7,6 +7,21 @@
 
 static t_class *jam_class;
 
+#define MAX_PENDING 256
+
+typedef struct _pending_noteoff {
+    struct _pending_noteoff *next;
+    long target_tick;
+    t_float pitch;
+    int channel;
+} t_pending_noteoff;
+
+typedef struct _active_note {
+    struct _active_note *next;
+    t_float pitch;
+    int channel;
+} t_active_note;
+
 typedef struct _jam {
     t_object x_obj;
     lua_State *L;
@@ -17,7 +32,91 @@ typedef struct _jam {
     long tc;               // tick counter
     long tc_wrap;          // largest beat-aligned value safe for t_float output
     t_float link_phase_prev; // previous Link beat phase for wraparound detection
+    t_pending_noteoff *noteoffs;  // linked list of pending note-offs
+    int noteoff_count;            // current count of pending note-offs
+    t_active_note *active_notes;  // linked list of sounding notes
+    int active_count;             // current count of active notes
 } t_jam;
+
+// Remove first matching note from active list
+static void jam_remove_active(t_jam *x, t_float pitch, int channel) {
+    t_active_note **pp = &x->active_notes;
+    while (*pp) {
+        t_active_note *a = *pp;
+        if (a->pitch == pitch && a->channel == channel) {
+            *pp = a->next;
+            freebytes(a, sizeof(*a));
+            x->active_count--;
+            return;
+        }
+        pp = &a->next;
+    }
+}
+
+// Output a note message on the left outlet and track active notes
+static void jam_output_note(t_jam *x, t_float pitch, t_float velocity, int channel) {
+    if (velocity > 0) {
+        // Track note-on in active list
+        if (x->active_count < MAX_PENDING) {
+            t_active_note *a = (t_active_note *)getbytes(sizeof(*a));
+            a->pitch = pitch;
+            a->channel = channel;
+            a->next = x->active_notes;
+            x->active_notes = a;
+            x->active_count++;
+        }
+    } else {
+        // Remove from active list on note-off
+        jam_remove_active(x, pitch, channel);
+    }
+    t_atom argv[4];
+    SETSYMBOL(&argv[0], gensym("note"));
+    SETFLOAT(&argv[1], pitch);
+    SETFLOAT(&argv[2], velocity);
+    SETFLOAT(&argv[3], (t_float)channel);
+    outlet_list(x->msg_out, &s_list, 4, argv);
+}
+
+// Process pending note-offs: send note-off for any that have reached their target tick
+static void jam_process_noteoffs(t_jam *x) {
+    t_pending_noteoff **pp = &x->noteoffs;
+    while (*pp) {
+        t_pending_noteoff *p = *pp;
+        if (x->tc >= p->target_tick) {
+            jam_output_note(x, p->pitch, 0, p->channel);
+            *pp = p->next;
+            freebytes(p, sizeof(*p));
+            x->noteoff_count--;
+        } else {
+            pp = &p->next;
+        }
+    }
+}
+
+// Flush all sounding notes: send note-offs for all active notes and clear pending list
+static void jam_flushnotes(t_jam *x) {
+    // Send note-offs for all active notes
+    while (x->active_notes) {
+        t_active_note *a = x->active_notes;
+        x->active_notes = a->next;
+        x->active_count--;
+        // Output note-off directly (don't go through jam_output_note to avoid list manipulation)
+        t_atom argv[4];
+        SETSYMBOL(&argv[0], gensym("note"));
+        SETFLOAT(&argv[1], a->pitch);
+        SETFLOAT(&argv[2], 0);
+        SETFLOAT(&argv[3], (t_float)a->channel);
+        outlet_list(x->msg_out, &s_list, 4, argv);
+        freebytes(a, sizeof(*a));
+    }
+    // Clear pending note-offs (their active entries were already flushed above)
+    t_pending_noteoff *p;
+    while ((p = x->noteoffs)) {
+        x->noteoffs = p->next;
+        freebytes(p, sizeof(*p));
+    }
+    x->noteoff_count = 0;
+}
 
 // Lua C function to implement jam.noteout()
 static int l_noteout(lua_State *L) {
@@ -25,41 +124,46 @@ static int l_noteout(lua_State *L) {
     lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
     t_jam *x = (t_jam *)lua_touserdata(L, -1);
     lua_pop(L, 1);
-    
+
     // Get arguments: note, velocity, duration (optional, in beats)
     double note = luaL_checknumber(L, 1);
     double velocity = luaL_checknumber(L, 2);
     double duration_beats = luaL_optnumber(L, 3, 0.0);
-    
+
     // Get channel from jam.ch
     lua_getglobal(L, "jam");
     lua_getfield(L, -1, "ch");
     int channel = (int)lua_tonumber(L, -1);
     lua_pop(L, 2);  // pop channel and jam table
-    
-    if (duration_beats > 0) {
-        // Calculate duration in milliseconds from beats
-        // duration_ms = (duration_beats / bpm) * 60000
-        int duration_ms = (int)((duration_beats / x->bpm) * 60000.0);
-        
-        // Output as makenote format: [makenote 60 100 500 1(
-        t_atom argv[5];
-        SETSYMBOL(&argv[0], gensym("makenote"));
-        SETFLOAT(&argv[1], (t_float)note);
-        SETFLOAT(&argv[2], (t_float)velocity);
-        SETFLOAT(&argv[3], (t_float)duration_ms);
-        SETFLOAT(&argv[4], (t_float)channel);
-        outlet_list(x->msg_out, &s_list, 5, argv);
-    } else {
-        // Output as raw note (no duration): [note 60 100 1(
-        t_atom argv[4];
-        SETSYMBOL(&argv[0], gensym("note"));
-        SETFLOAT(&argv[1], (t_float)note);
-        SETFLOAT(&argv[2], (t_float)velocity);
-        SETFLOAT(&argv[3], (t_float)channel);
-        outlet_list(x->msg_out, &s_list, 4, argv);
+
+    // Output note-on
+    jam_output_note(x, (t_float)note, (t_float)velocity, channel);
+
+    // Schedule note-off if duration given
+    if (duration_beats > 0 && velocity > 0) {
+        if (x->noteoff_count >= MAX_PENDING) {
+            pd_error(x, "jam: noteoff limit (%d) reached, skipping note-off for %.0f",
+                     MAX_PENDING, note);
+        } else {
+            t_pending_noteoff *p = (t_pending_noteoff *)getbytes(sizeof(*p));
+            p->pitch = (t_float)note;
+            p->channel = channel;
+            p->target_tick = x->tc + (long)(duration_beats * x->tpb);
+            p->next = x->noteoffs;
+            x->noteoffs = p;
+            x->noteoff_count++;
+        }
     }
-    
+
+    return 0;
+}
+
+// Lua C function to implement jam.flushnotes()
+static int l_flushnotes(lua_State *L) {
+    lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
+    t_jam *x = (t_jam *)lua_touserdata(L, -1);
+    lua_pop(L, 1);
+    jam_flushnotes(x);
     return 0;
 }
 
@@ -174,7 +278,10 @@ static void init_jam(t_jam *x) {
     // Register C functions
     lua_pushcfunction(L, l_noteout);
     lua_setfield(L, -2, "noteout");
-    
+
+    lua_pushcfunction(L, l_flushnotes);
+    lua_setfield(L, -2, "flushnotes");
+
     lua_pushcfunction(L, l_msgout);
     lua_setfield(L, -2, "msgout");
 
@@ -228,6 +335,8 @@ static void reset_lua_state(t_jam *x) {
 
 // Load and initialize a jam file
 static int load_jam(t_jam *x, t_symbol *s) {
+    // Flush all sounding notes before reloading
+    jam_flushnotes(x);
     // Reset Lua state for clean reload
     reset_lua_state(x);
     lua_State *L = x->L;
@@ -318,6 +427,9 @@ static void jam_bang(t_jam *x) {
         pd_error(x, "jam: error in tick(): %s", lua_tostring(L, -1));
         lua_pop(L, 1);
     }
+
+    // Process pending note-offs after Lua tick (so note-ons go first)
+    jam_process_noteoffs(x);
 
     x->tc++;
 }
@@ -471,6 +583,7 @@ static void jam_linkphase(t_jam *x, t_floatarg phase) {
 // Reset tick counter
 static void jam_reset(t_jam *x) {
     x->tc = 0;
+    jam_flushnotes(x);
     outlet_symbol(x->msg_out, gensym("reset"));
     post("jam: reset counters");
 }
@@ -520,7 +633,11 @@ static void *jam_new(t_symbol *s, int argc, t_atom *argv) {
     x->bpm = 60.0;
     x->tc = 0;
     x->link_phase_prev = 0.0;
-    
+    x->noteoffs = 0;
+    x->noteoff_count = 0;
+    x->active_notes = 0;
+    x->active_count = 0;
+
     // Parse arguments (optional: tpb, bpm)
     if (argc > 0 && argv[0].a_type == A_FLOAT)
         x->tpb = atom_getfloat(&argv[0]);
@@ -555,6 +672,7 @@ static void *jam_new(t_symbol *s, int argc, t_atom *argv) {
 
 // Destructor
 static void jam_free(t_jam *x) {
+    jam_flushnotes(x);
     if (x->L) {
         lua_close(x->L);
     }
@@ -578,8 +696,10 @@ void jam_setup(void) {
                     gensym("msg"), A_GIMME, 0);
     class_addmethod(jam_class, (t_method)load_jam,
                     gensym("load"), A_SYMBOL, 0);
-    class_addmethod(jam_class, (t_method)jam_reset, 
+    class_addmethod(jam_class, (t_method)jam_reset,
                     gensym("reset"), 0);
+    class_addmethod(jam_class, (t_method)jam_flushnotes,
+                    gensym("flushnotes"), 0);
     class_addmethod(jam_class, (t_method)jam_bpm, 
                     gensym("bpm"), A_FLOAT, 0);
     class_addmethod(jam_class, (t_method)jam_tpb,

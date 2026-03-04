@@ -44,19 +44,26 @@ jam.once(2.5)    -- True only at beat 2.5
 
 #### `jam.noteout(note, velocity, duration)`
 Send a note to Pure Data's left outlet.
-Duration is in beats, and is optional.  If duration is provided, the note will be output as makenote with duration converted to ms.
+If duration is provided (in beats), a note-off (velocity 0) is automatically scheduled after that many beats. The timing is tick-based, so it tracks tempo changes.
 
 ```lua
-jam.noteout(60, 100, 1)      -- C4, velocity 100, 1 beat duration
+jam.noteout(60, 100, 1)      -- C4, velocity 100, note-off after 1 beat
 jam.noteout(60.5, 100, 1)    -- microtone between C4 and C#4
+jam.noteout(60, 100)          -- C4, velocity 100, no automatic note-off
 ```
 
 - **`note`** - MIDI note number, supports floats for microtonal pitches (e.g. `60.5`)
 - **`velocity`** - Note velocity (0-127), supports floats
-- **`duration`** - (optional) Duration in beats
+- **`duration`** - (optional) Duration in beats, schedules automatic note-off
 
-Output format no duration: `note [note] [velocity] [channel]`
-Output format with duration: `makenote [note] [velocity] [duration] [channel]`
+Output format: `note [note] [velocity] [channel]`
+
+#### `jam.flushnotes()`
+Send note-off (velocity 0) for all currently sounding notes and cancel all pending scheduled note-offs. Useful for panic/cleanup.
+
+```lua
+jam.flushnotes()
+```
 
 ## Input Handlers
 
@@ -114,14 +121,29 @@ end
 - **`bang`** - Advance one tick (typically driven by `[metro]`)
 - **`linkphase [0-1]`** - Sync to Ableton Link beat phase. Call every DSP block with the current beat phase (0=beat start, 1=beat end). Fires as many ticks as needed to keep `tc` aligned with Link. Handles beat boundary wraparound. When using Link, omit the `[metro]` and drive jam with `linkphase` instead.
 - **`float`** - Set tick counter (does not execute tick)
-- **`reset`** - Reset tick counter to 0
+- **`reset`** - Reset tick counter to 0, flush all sounding notes
+- **`flushnotes`** - Send note-off for all sounding notes, cancel pending note-offs
 - **`bpm [number]`** - Set tempo
 - **`tpb [number]`** - Set ticks per beat resolution
 - **`note [note] [velocity] [channel]`** - Route to `notein` handler
 - **`msg [args...]`** - Route to `msgin` handler
+- **`list [function] [args...]`** - Call any Lua function by name (see below)
+
+#### Calling Lua functions from Pd
+
+Any list message whose first element is a symbol will call the Lua function with that name, passing `jam` as the first argument followed by the remaining atoms. This lets you extend jam with custom functions without modifying the C code.
+
+For example, sending `list setscale 0 2 4 5 7 9 11` to the jam object will call:
+```lua
+function setscale(jam, ...)
+    -- args: 0, 2, 4, 5, 7, 9, 11
+end
+```
+
+If the function doesn't exist in Lua, the message is silently ignored.
 
 ### Outlets
-- **Left outlet** - Musical messages (`note`, `makenote`, `loaded`, `reset`)
+- **Left outlet** - Musical messages (`note`, `loaded`, `reset`)
 - **Right outlet** - Tick counter (outputs tc before each tick)
 
 ## Design Philosophy
