@@ -136,7 +136,23 @@ static int l_noteout(lua_State *L) {
     int channel = (int)lua_tonumber(L, -1);
     lua_pop(L, 2);  // pop channel and jam table
 
-    // Output note-on
+    // Fire any pending note-off for this pitch/channel before new note-on
+    if (velocity > 0) {
+        t_pending_noteoff **pp = &x->noteoffs;
+        while (*pp) {
+            t_pending_noteoff *p = *pp;
+            if (p->pitch == (t_float)note && p->channel == channel) {
+                jam_output_note(x, p->pitch, 0, p->channel);
+                *pp = p->next;
+                freebytes(p, sizeof(*p));
+                x->noteoff_count--;
+                break;
+            }
+            pp = &p->next;
+        }
+    }
+
+    // Output note
     jam_output_note(x, (t_float)note, (t_float)velocity, channel);
 
     // Schedule note-off if duration given
