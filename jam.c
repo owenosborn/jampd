@@ -579,12 +579,24 @@ static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
 static void jam_linkphase(t_jam *x, t_floatarg phase) {
     if (phase < 0.0) return;
     if (phase > 1.0) phase = phase - (long)phase;
+
+    // Compute forward distance around the phase circle (0-1)
+    double fwd = phase - x->link_phase_prev;
+    if (fwd < 0.0) fwd += 1.0;  // wrap: e.g. 0.99 -> 0.01 = 0.02
+
+    // If forward distance is more than half a beat, phase actually
+    // stepped backward (shorter arc is backward). Skip it.
+    if (fwd > 0.5) {
+        x->link_phase_prev = phase;
+        return;
+    }
+
     long target = (long)(phase * x->tpb);
     long current = x->tc % (long)x->tpb;
 
     long delta;
-    if (phase < x->link_phase_prev && x->link_phase_prev > 0.5) {
-        // beat boundary crossed
+    if (fwd > 0.0 && target < current) {
+        // beat boundary crossed (forward wrap)
         delta = ((long)x->tpb - current) + target;
     } else {
         delta = target - current;
