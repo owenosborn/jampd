@@ -587,7 +587,9 @@ static void jam_linkphase(t_jam *x, t_floatarg phase) {
     // If forward distance is more than half a beat, phase actually
     // stepped backward (shorter arc is backward). Skip it.
     if (fwd > 0.5) {
-        x->link_phase_prev = phase;
+        // Don't update link_phase_prev: keep comparing against the
+        // pre-jump value so subsequent phases stay filtered until
+        // phase naturally catches back up (avoids tc/prev desync).
         return;
     }
 
