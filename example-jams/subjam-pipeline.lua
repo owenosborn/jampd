@@ -10,7 +10,7 @@ function init(jam)
     local my_dir = info.source:match("^@(.*/)")
 
     -- Load arp first (its output goes to the real jam.noteout)
-    arp = SubJam.load(my_dir .. "arp.lua", jam)
+    arp = SubJam.load(my_dir .. "basic-arp.lua", jam)
 
     -- Load chord generator with output routed into arp's notein
     chord_gen = SubJam.load(

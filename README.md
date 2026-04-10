@@ -1,8 +1,8 @@
-# Jam
+# Here is the Jam
 
 Jam is an environment for sketching musical ideas in Lua.
 
-Jam doesn't make any sound itself, it only makes messages. Think of it as operating at the control rate: it specifies *what* to play, not *how* it sounds. Like MIDI, Jam describes notes and events, and it's up to whatever you connect it to (a synth, a sampler, a DAW) to make those notes audible.
+Jam doesn't make any sound itself, it only makes messages. Think of it as operating at the control rate: it specifies *what* to play, but doesn't create sound. Like MIDI, Jam describes notes and events, and it's up to whatever you connect it to (a synth, a sampler, a DAW) to make those notes audible.
 
 Jam was inspired by creative coding platforms like Processing, p5.js, openFrameworks, and Arduino, which are all based on the same idea: we're specifying things that happen over time. In those systems, behavior boils down to something that happens once at the beginning (setup) and something that happens again and again (draw). In Jam, we call a function once at initialization, and then once per tick. A tick is the finest perceptible subdivision of the musical beat.
 
@@ -146,25 +146,26 @@ end
 
 ```lua
 function init(jam)
-    notes = {}
+    held = {}
+    sorted = {}
     idx = 1
 end
 
 function notein(jam, note, velocity)
     if velocity > 0 then
-        notes[note] = true
+        held[note] = true
     else
-        notes[note] = nil
+        held[note] = nil
     end
-end
-
-function tick(jam)
-    local sorted = {}
-    for n, _ in pairs(notes) do
+    -- rebuild sorted list when notes change
+    sorted = {}
+    for n, _ in pairs(held) do
         table.insert(sorted, n)
     end
     table.sort(sorted)
+end
 
+function tick(jam)
     if #sorted > 0 and jam.every(1/4) then
         idx = ((idx - 1) % #sorted) + 1
         jam.noteout(sorted[idx], 80, 1/5)
@@ -217,6 +218,8 @@ function tick(jam)
     end
 end
 ```
+
+More examples in the [example-jams](example-jams/) folder.
 
 ## The Jam Library
 
