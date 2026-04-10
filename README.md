@@ -1,158 +1,273 @@
-# Jam - Lua-Powered Music Processor for Pure Data
+# Jam
 
-## Overview
-Jam is a Pure Data external that embeds a Lua interpreter for creating algorithmic music and MIDI processing. It provides a minimal but powerful API focused on tick-based timing and MIDI I/O, allowing you to build any musical process using Lua scripts.
+Jam is an environment for sketching musical ideas in Lua.
 
-## Core Concept
+Jam doesn't make any sound itself, it only makes messages. Think of it as operating at the control rate: it specifies *what* to play, not *how* it sounds. Like MIDI, Jam describes notes and events, and it's up to whatever you connect it to (a synth, a sampler, a DAW) to make those notes audible.
 
-Jam scripts follow a simple lifecycle:
-- **`init(jam)`** - Called once when the script loads
-- **`tick(jam)`** - Called on every timing tick
-- **Input handlers** - Called when MIDI or other messages arrive
+Jam was inspired by creative coding platforms like Processing, p5.js, openFrameworks, and Arduino, which are all based on the same idea: we're specifying things that happen over time. In those systems, behavior boils down to something that happens once at the beginning (setup) and something that happens again and again (draw). In Jam, we call a function once at initialization, and then once per tick. A tick is the finest perceptible subdivision of the musical beat.
 
-The `jam` object provides timing information and functions to generate musical output.
+Currently Jam is implemented as a Pure Data external, allowing you to load and run Jam scripts right in Pd.
 
-## The jam Object
+## The Jam Script
 
-### Timing Properties
-- **`jam.tpb`** - Ticks per beat (default: 180, configurable)
-- **`jam.bpm`** - Beats per minute (default: 100)
-- **`jam.tc`** - Global tick counter (starts at 0, increments each tick)
-- **`jam.ch`** - MIDI output channel (default: 1)
+A jam script specifies musical behavior with up to four functions (all optional):
 
-### Core Functions
-
-#### `jam.every(interval, offset)`
-Returns true when the current tick aligns with a rhythmic interval.
+- **`init(jam)`** — called once at the beginning, sets initial conditions
+- **`tick(jam)`** — called once per tick, this is where you generate music
+- **`notein(jam, note, velocity)`** — called when a note arrives into the jam system
+- **`msgin(jam, ...)`** — called when any other a message arrives into the jam system
 
 ```lua
-jam.every(1)       -- Every beat
-jam.every(1/4)     -- Every quarter beat (sixteenth notes)
-jam.every(2)       -- Every 2 beats
-jam.every(1, 1/2)  -- Every beat, offset by half a beat
-```
-
-- **`interval`** - Number of beats between triggers (default: 1)
-- **`offset`** - Beat offset for rhythmic displacement (default: 0). Delays triggers by this many beats. Does not wrap - an offset of 2.5 delays by exactly 2.5 beats. Returns false until the offset time has elapsed. Useful for swing (small values like `1/6`) or staggered pattern starts (larger values).
-
-#### `jam.once(beat)`
-Returns true exactly once at the specified beat number.
-```lua
-jam.once(4)      -- True only at beat 4
-jam.once(2.5)    -- True only at beat 2.5
-```
-
-#### `jam.noteout(note, velocity, duration)`
-Send a note to Pure Data's left outlet.
-If duration is provided (in beats), a note-off (velocity 0) is automatically scheduled after that many beats. The timing is tick-based, so it tracks tempo changes.
-
-```lua
-jam.noteout(60, 100, 1)      -- C4, velocity 100, note-off after 1 beat
-jam.noteout(60.5, 100, 1)    -- microtone between C4 and C#4
-jam.noteout(60, 100)          -- C4, velocity 100, no automatic note-off
-```
-
-- **`note`** - MIDI note number, supports floats for microtonal pitches (e.g. `60.5`)
-- **`velocity`** - Note velocity (0-127), supports floats
-- **`duration`** - (optional) Duration in beats, schedules automatic note-off
-
-Output format: `note [note] [velocity] [channel]`
-
-#### `jam.flushnotes()`
-Send note-off (velocity 0) for all currently sounding notes and cancel all pending scheduled note-offs. Useful for panic/cleanup.
-
-```lua
-jam.flushnotes()
-```
-
-## Input Handlers
-
-Jam scripts can respond to incoming messages by implementing handler functions:
-
-### `notein(jam, note, velocity)`
-Called when a note message arrives.
-
-```lua
-function notein(jam, note, velocity)
-    -- Process incoming note
-end
-```
-
-### `msgin(jam, ...)`
-Called when a msg message arrives. Receives arbitrary arguments.
-
-```lua
-function msgin(jam, ...)
-    local args = {...}
-    -- Process incoming message
-end
-```
-
-## Basic Jam Structure
-
-```lua
-
 function init(jam)
-    -- Initialize your musical process
+    -- set initial conditions
 end
 
 function tick(jam)
-    -- Called every tick - generate music here
+    -- generate music here
 end
 
--- Optional: respond to incoming messages
 function notein(jam, note, velocity)
-    -- Process incoming MIDI
+    -- respond to incoming notes
 end
 
+function msgin(jam, ...)
+    -- respond to incoming messages
+end
 ```
 
-## Pure Data Setup
+## The jam Object
 
-### Creating the Object
+All four functions receive the `jam` object, which provides the context in which your script is running: where you are in musical time, and how to send information out.
+
+### Timing Properties
+
+| Property   | Description                                          | Default |
+|------------|------------------------------------------------------|---------|
+| `jam.tc`   | Global tick counter — number of ticks since init     | 0       |
+| `jam.tpb`  | Ticks per beat (usually constant for the whole jam)  | 180     |
+| `jam.bpm`  | Current beats per minute                             | 100     |
+| `jam.ch`   | MIDI output channel                                  | 1       |
+
+### jam.every(interval, offset)
+
+Evaluates to true at the given beat period. This is how you build rhythmic patterns.
+
+```lua
+jam.every(1)       -- once per beat
+jam.every(1/2)     -- every half beat (eighth notes)
+jam.every(1/4)     -- every quarter beat (sixteenth notes)
+jam.every(2)       -- every two beats (half notes)
+jam.every(1, 1/2)  -- every beat, offset by half a beat
+```
+
+- **interval** — number of beats between triggers (default: 1)
+- **offset** — beat offset for rhythmic displacement (default: 0). Delays triggers by this many beats. Does not wrap — an offset of 2.5 delays by exactly 2.5 beats. Returns false until the offset time has elapsed. Useful for swing (small values like `1/6`) or staggering pattern starts.
+
+### jam.once(beat)
+
+Evaluates to true exactly once at the specified beat number.
+
+```lua
+jam.once(0)      -- first tick, right after init
+jam.once(4)      -- at beat 4
+jam.once(2.5)    -- at beat 2.5
+```
+
+### jam.noteout(note, velocity, duration)
+
+Sends a note out. If you specify a duration (in beats), Jam automatically schedules a note-off after that many beats.
+
+```lua
+jam.noteout(60, 100, 1)      -- C4, velocity 100, 1 beat long
+jam.noteout(60.5, 100, 1)    -- microtone between C4 and C#4
+jam.noteout(60, 100)          -- no automatic note-off
+```
+
+- **note** — MIDI note number. Supports floats for microtonal pitches (e.g. `60.5`)
+- **velocity** — 0–127
+- **duration** — (optional) length in beats, schedules automatic note-off
+
+### jam.msgout(...)
+
+Sends an arbitrary message out. Use this for anything that isn't a note: synth parameters, continuous controllers, OSC-style messages, Pd-style lists. It's up to whatever you have Jam connected to to interpret the data.
+
+```lua
+jam.msgout("cc", 21, 64)           -- send a CC message
+jam.msgout("osc", "/filter", 0.5)  -- send an OSC-style message
+```
+
+### jam.flushnotes()
+
+Sends note-off for all currently sounding notes and cancels all pending note-offs. Panic button.
+
+## Examples
+
+### Play one note at the start
+
+```lua
+function init(jam)
+    jam.noteout(60, 100, 1)  -- C4, one beat long
+end
+```
+
+### Play a note every beat
+
+```lua
+function tick(jam)
+    if jam.every(1) then
+        jam.noteout(60, 100, 1/2)
+    end
+end
+```
+
+### Pass input notes to output
+
+```lua
+function notein(jam, note, velocity)
+    jam.noteout(note, velocity)
+end
+```
+
+### Simple arpeggiator
+
+```lua
+function init(jam)
+    notes = {}
+    idx = 1
+end
+
+function notein(jam, note, velocity)
+    if velocity > 0 then
+        notes[note] = true
+    else
+        notes[note] = nil
+    end
+end
+
+function tick(jam)
+    local sorted = {}
+    for n, _ in pairs(notes) do
+        table.insert(sorted, n)
+    end
+    table.sort(sorted)
+
+    if #sorted > 0 and jam.every(1/4) then
+        idx = ((idx - 1) % #sorted) + 1
+        jam.noteout(sorted[idx], 80, 1/5)
+        idx = idx + 1
+    end
+end
+```
+
+### Walk up a minor scale
+
+```lua
+function init(jam)
+    scale = {0, 2, 3, 5, 7, 8, 10}
+    step = 1
+end
+
+function tick(jam)
+    if jam.every(1/2) then
+        jam.noteout(60 + scale[step], 90, 1/4)
+        step = (step % #scale) + 1
+    end
+end
+```
+
+### A simple melody
+
+```lua
+function init(jam)
+    melody = {60, 62, 64, 65, 67, 65, 64, 62}
+    idx = 1
+end
+
+function tick(jam)
+    if jam.every(1) then
+        jam.noteout(melody[idx], 100, 3/4)
+        idx = (idx % #melody) + 1
+    end
+end
+```
+
+### Send an LFO message
+
+```lua
+function tick(jam)
+    local beats = jam.tc / jam.tpb
+    local lfo = math.floor((math.sin(2 * math.pi * beats / 8) + 1) / 2 * 127)
+
+    if jam.every(1/8) then
+        jam.msgout("cc", 21, lfo)
+    end
+end
+```
+
+## The Jam Library
+
+The Jam library is a collection of Lua modules designed to play nicely with the Jam system. Documentation is in a separate file (see [JAM-LIBRARY.md](JAM-LIBRARY.md)).
+
+Modules include:
+
+- **chord** — chord construction and note filtering
+- **progression** — chord progressions from string notation
+- **sequencer** — step sequencing
+- **subjam** — run jams inside other jams
+- **utils** — general-purpose helpers
+
+## Jam in Pure Data
+
+Currently, Jam is implemented as a Pure Data external. Pd is a natural fit because it provides MIDI I/O, sound synthesis, and a metronome — everything Jam needs to turn its messages into music.
+
+### Creating the object
+
 ```
 [jam 180 100]
 ```
-- First argument: ticks per beat (optional, default 180)
-- Second argument: BPM (optional, default 100)
+
+First argument is ticks per beat (default 180), second is BPM (default 100). To run your jam, just bang the object at the tick rate. The Lua interpreter is lightweight, so running many jam objects (tens or even hundreds) in a single patch is no problem.
 
 ### Messages
-- **`load [filename]`** - Load a Lua jam script
-- **`bang`** - Advance one tick (typically driven by `[metro]`)
-- **`linkphase [0-1]`** - Sync to Ableton Link beat phase. Call every DSP block with the current beat phase (0=beat start, 1=beat end). Fires as many ticks as needed to keep `tc` aligned with Link. Handles beat boundary wraparound. When using Link, omit the `[metro]` and drive jam with `linkphase` instead.
-- **`float`** - Set tick counter (does not execute tick)
-- **`reset`** - Reset tick counter to 0, flush all sounding notes
-- **`flushnotes`** - Send note-off for all sounding notes, cancel pending note-offs
-- **`bpm [number]`** - Set tempo
-- **`tpb [number]`** - Set ticks per beat resolution
-- **`note [note] [velocity] [channel]`** - Route to `notein` handler
-- **`msg [args...]`** - Route to `msgin` handler
-- **`list [function] [args...]`** - Call any Lua function by name (see below)
 
-#### Calling Lua functions from Pd
+| Message | What it does |
+|---------|-------------|
+| `load <filename>` | Load a Lua jam script |
+| `bang` | Advance one tick (typically driven by `[metro]`) |
+| `reset` | Reset tick counter to 0, flush all sounding notes |
+| `flushnotes` | Note-off for all sounding notes, cancel pending note-offs |
+| `bpm <number>` | Set tempo |
+| `tpb <number>` | Set ticks per beat resolution |
+| `note <note> <vel> <ch>` | Route to `notein` handler |
+| `msg <args...>` | Route to `msgin` handler |
+| `linkphase <0-1>` | Sync to Ableton Link beat phase (see below) |
+| `list <function> <args...>` | Call any Lua function by name (see below) |
 
-Any list message whose first element is a symbol will call the Lua function with that name, passing `jam` as the first argument followed by the remaining atoms. This lets you extend jam with custom functions without modifying the C code.
+### Outlets
 
-For example, sending `list setscale 0 2 4 5 7 9 11` to the jam object will call:
+- **Left** — musical messages (`note`, `msg`, `loaded`, `reset`)
+- **Right** — tick counter (outputs `tc` before each tick)
+
+### Ableton Link
+
+Instead of driving Jam with `[metro]` + `bang`, you can sync to Ableton Link by sending `linkphase` every DSP block with the current beat phase (0 = beat start, 1 = beat end). Jam fires as many ticks as needed to stay aligned with Link, handling beat boundary wraparound.
+
+### Calling Lua functions from Pd
+
+A handy consequence of running inside Pd: any list message whose first element is a symbol calls the Lua function with that name, passing `jam` as the first argument followed by the remaining values. This is a convenient shortcut for dispatching messages — instead of routing through `msgin` and checking the name there, you can define a function directly in your script.
+
+```
+[list setscale 0 2 4 5 7 9 11]
+```
+
+calls:
+
 ```lua
 function setscale(jam, ...)
-    -- args: 0, 2, 4, 5, 7, 9, 11
+    local args = {...}  -- 0, 2, 4, 5, 7, 9, 11
 end
 ```
 
-If the function doesn't exist in Lua, the message is silently ignored.
+If the function doesn't exist, the message is silently ignored.
 
-### Outlets
-- **Left outlet** - Musical messages (`note`, `loaded`, `reset`)
-- **Right outlet** - Tick counter (outputs tc before each tick)
-
-## Design Philosophy
-
-Jam provides a **minimal timing and I/O foundation** upon which any musical process can be built:
-
-- **Tick-based timing** - Precise rhythmic control via `jam.every()`
-- **Bidirectional MIDI** - Generate notes via `jam.noteout()`, respond via `notein()`
-- **Lua flexibility** - Full programming language for algorithms, state, randomness
-- **Hot-reloadable** - Edit scripts and reload without restarting Pure Data
-
-The simplicity is intentional: rather than providing high-level musical abstractions, Jam gives you the tools to create your own.
+See the Pd help patch for more details.
