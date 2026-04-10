@@ -46,7 +46,7 @@ All four functions receive the `jam` object, which provides the context in which
 | `jam.tc`   | Global tick counter — number of ticks since init     | 0       |
 | `jam.tpb`  | Ticks per beat (usually constant for the whole jam)  | 180     |
 | `jam.bpm`  | Current beats per minute                             | 100     |
-| `jam.ch`   | MIDI output channel                                  | 1       |
+| `jam.ch`   | MIDI output channel (appended to outgoing notes)     | 1       |
 
 ### jam.every(interval, offset)
 
@@ -86,6 +86,20 @@ jam.noteout(60, 100)          -- no automatic note-off
 - **note** — MIDI note number. Supports floats for microtonal pitches (e.g. `60.5`)
 - **velocity** — 0–127
 - **duration** — (optional) length in beats, schedules automatic note-off
+
+The current value of `jam.ch` is appended to every outgoing note. Set it before calling `noteout` to route notes to different channels — for example, drums on one channel and bass on another:
+
+```lua
+function tick(jam)
+    if jam.every(1) then
+        jam.ch = 1
+        jam.noteout(36, 100, 1/4)  -- kick drum on channel 1
+
+        jam.ch = 2
+        jam.noteout(36, 90, 1)     -- bass note on channel 2
+    end
+end
+```
 
 ### jam.msgout(...)
 
@@ -206,7 +220,7 @@ end
 
 ## The Jam Library
 
-The Jam library is a collection of Lua modules designed to play nicely with the Jam system. Documentation is in a separate file (see [JAM-LIBRARY.md](JAM-LIBRARY.md)).
+The Jam library is a collection of Lua modules designed to play nicely with the Jam system. Documentation is in a separate file (see [lib/JAM-LIBRARY.md](lib/JAM-LIBRARY.md)).
 
 Modules include:
 

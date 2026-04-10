@@ -21,8 +21,8 @@ function tick(jam)
 
     -- Send CC messages a few times per beat
     if jam.every(1/10) then
-        jam.cltout(21, lfo1)
-        jam.cltout(22, lfo2)
-        jam.cltout(23, lfo3)
+        jam.msgout("cc", 21, lfo1)
+        jam.msgout("cc", 22, lfo2)
+        jam.msgout("cc", 23, lfo3)
     end
 end
