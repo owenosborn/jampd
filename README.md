@@ -1,12 +1,14 @@
-# Here is the Jam
+# Jam
 
 Jam is an environment for sketching musical ideas in Lua.
 
 Jam doesn't make any sound itself, it only makes messages. Think of it as operating at the control rate: it specifies *what* to play, but doesn't create sound. Like MIDI, Jam describes notes and events, and it's up to whatever you connect it to (a synth, a sampler, a DAW) to make those notes audible.
 
-Jam was inspired by creative coding platforms like Processing, p5.js, openFrameworks, and Arduino, which are all based on the same idea: we're specifying things that happen over time. In those systems, behavior boils down to something that happens once at the beginning (setup) and something that happens again and again (draw). In Jam, we call a function once at initialization, and then once per tick. A tick is the finest perceptible subdivision of the musical beat.
+Jam was inspired by creative coding platforms like Processing, openFrameworks, and Arduino, which all model behavior based on the same pattern: something that happens once at the beginning (setup) and something that happens again and again (draw). In Jam, we call a function once at initialization, and then once per tick, where a tick is a tiny subdivision of the musical beat.
 
 Currently Jam is implemented as a Pure Data external, allowing you to load and run Jam scripts right in Pd.
+
+Die Kunst der Jam.
 
 ## The Jam Script
 
