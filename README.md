@@ -8,7 +8,7 @@ Jam was inspired by creative coding platforms like Processing, and openFramework
 
 Currently Jam is implemented as a Pure Data external, allowing you to load and run Jam scripts right in Pd.
 
-See Jam in action inside the Critter & Guitari (PLAY patches)[https://patchstorage.com/play-patches-2/] for the Organelle, documented [here](https://critterandguitari.github.io/cg-docs/Organelle/organelle_programming/#22-the-faust-lua-jam-patch).
+See Jam in action inside the Critter & Guitari [PLAY patches](https://patchstorage.com/play-patches-2/) for the Organelle, documented [here](https://critterandguitari.github.io/cg-docs/Organelle/organelle_programming/#22-the-faust-lua-jam-patch).
 
 ## The Jam Script
 
